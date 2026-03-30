@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { LearningLoopChart } from '@/components/analytics/learning-loop-chart'
 import {
   BarChart,
   Bar,
@@ -144,6 +145,8 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <LearningLoopChart />
     </div>
   )
 }
