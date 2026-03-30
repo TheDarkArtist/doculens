@@ -60,6 +60,50 @@ const medicalSchema: TemplateSchema = {
   validation_rules: { date_logic: [{ rule: 'date_of_service <= today', description: 'Not in future' }] },
 }
 
+const resumeSchema: TemplateSchema = {
+  fields: [
+    { name: 'full_name', type: 'string', required: true, description: 'Candidate full name' },
+    { name: 'email', type: 'string', required: true, description: 'Email address', sensitive: true },
+    { name: 'phone', type: 'string', required: false, description: 'Phone number', sensitive: true },
+    { name: 'location', type: 'string', required: false, description: 'City, state, country' },
+    { name: 'summary', type: 'string', required: false, description: 'Professional summary or objective' },
+    { name: 'skills', type: 'array', required: true, description: 'Technical and soft skills' },
+    { name: 'experience', type: 'array', required: true, description: 'Work experience entries (company, role, dates)' },
+    { name: 'education', type: 'array', required: true, description: 'Education entries (institution, degree, dates)' },
+    { name: 'certifications', type: 'array', required: false, description: 'Professional certifications' },
+    { name: 'languages', type: 'array', required: false, description: 'Languages spoken' },
+    { name: 'linkedin_url', type: 'string', required: false, description: 'LinkedIn profile URL' },
+    { name: 'github_url', type: 'string', required: false, description: 'GitHub profile URL' },
+    { name: 'years_of_experience', type: 'number', required: false, description: 'Total years of professional experience' },
+  ],
+}
+
+const bankStatementSchema: TemplateSchema = {
+  fields: [
+    { name: 'account_holder', type: 'string', required: true, description: 'Account holder name', sensitive: true },
+    { name: 'account_number', type: 'string', required: true, description: 'Bank account number', sensitive: true },
+    { name: 'bank_name', type: 'string', required: true, description: 'Financial institution name' },
+    { name: 'statement_period_start', type: 'date', required: true, description: 'Statement period start date' },
+    { name: 'statement_period_end', type: 'date', required: true, description: 'Statement period end date' },
+    { name: 'opening_balance', type: 'currency', required: true, description: 'Balance at start of period' },
+    { name: 'closing_balance', type: 'currency', required: true, description: 'Balance at end of period' },
+    { name: 'total_deposits', type: 'currency', required: true, description: 'Sum of all deposits/credits' },
+    { name: 'total_withdrawals', type: 'currency', required: true, description: 'Sum of all withdrawals/debits' },
+    { name: 'transaction_count', type: 'number', required: false, description: 'Total number of transactions' },
+    { name: 'currency', type: 'string', required: true, description: 'Account currency (ISO 4217)' },
+    { name: 'branch', type: 'string', required: false, description: 'Branch name or code' },
+    { name: 'ifsc_code', type: 'string', required: false, description: 'IFSC or routing number' },
+  ],
+  validation_rules: {
+    arithmetic: [
+      { rule: 'closing_balance = opening_balance + total_deposits - total_withdrawals', description: 'Closing balance must reconcile' },
+    ],
+    date_logic: [
+      { rule: 'statement_period_end > statement_period_start', description: 'End date must be after start' },
+    ],
+  },
+}
+
 async function seed() {
   console.log('Seeding database...')
 
@@ -76,6 +120,8 @@ async function seed() {
     { name: 'Invoice', slug: 'invoice', description: 'Standard business invoice', schema: invoiceSchema, isSystem: true },
     { name: 'KYC Identity Document', slug: 'kyc-identity', description: 'Passport, driver license, or national ID', schema: kycSchema, isSystem: true },
     { name: 'Medical Record', slug: 'medical-record', description: 'Clinical forms and prior authorization', schema: medicalSchema, isSystem: true },
+    { name: 'Resume / CV', slug: 'resume', description: 'Professional resume or curriculum vitae', schema: resumeSchema, isSystem: true },
+    { name: 'Bank Statement', slug: 'bank-statement', description: 'Monthly or quarterly bank account statement', schema: bankStatementSchema, isSystem: true },
   ]).returning()
 
   const templateMap = Object.fromEntries(templateRows.map((t) => [t.slug, t.id]))
