@@ -20,7 +20,7 @@ type FileEntry = {
 
 export function UploadZone() {
   const router = useRouter()
-  const { upload } = useUpload()
+  const { upload, documentId } = useUpload()
   const [files, setFiles] = useState<FileEntry[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -61,12 +61,21 @@ export function UploadZone() {
   const hasPending = files.some((f) => f.status === 'pending')
 
   if (allDone) {
+    // Single file → go directly to document detail to watch processing
+    if (files.length === 1 && documentId) {
+      router.push(`/documents/${documentId}`)
+      return null
+    }
+
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-12">
           <CheckCircle className="h-12 w-12 text-green-500" />
           <p className="text-lg font-medium">
-            {files.length} document{files.length > 1 ? 's' : ''} uploaded
+            {files.length} documents uploaded
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Documents are being processed by the AI pipeline.
           </p>
           <div className="flex gap-2">
             <Button onClick={() => setFiles([])} variant="outline">Upload more</Button>

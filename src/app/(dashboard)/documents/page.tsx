@@ -6,6 +6,7 @@ import { listTemplates } from '@/features/templates/template.repository'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DocumentTable } from '@/components/documents/document-table'
+import { AutoRefresh } from '@/components/documents/auto-refresh'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Upload, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -37,8 +38,13 @@ export default async function DocumentsPage({
     listTemplates(session.user.tenantId),
   ])
 
+  const hasTransient = items.some(
+    (d) => d.status === 'queued' || d.status === 'processing'
+  )
+
   return (
     <div className="space-y-6">
+      <AutoRefresh hasTransient={hasTransient} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Documents</h1>

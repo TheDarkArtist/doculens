@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/documents/status-badge'
 import { ConfidenceBadge } from '@/components/review/confidence-badge'
+import { AutoRefresh } from '@/components/documents/auto-refresh'
 import { Eye, Download } from 'lucide-react'
 
 export default async function DocumentDetailPage({
@@ -20,8 +21,11 @@ export default async function DocumentDetailPage({
   const doc = await getDocumentById(session.user.tenantId, id)
   if (!doc) notFound()
 
+  const isTransient = doc.status === 'queued' || doc.status === 'processing'
+
   return (
     <div className="space-y-6">
+      <AutoRefresh hasTransient={isTransient} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{doc.filename}</h1>

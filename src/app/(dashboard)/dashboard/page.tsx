@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/documents/status-badge'
 import { EmptyState } from '@/components/ui/empty-state'
+import { AutoRefresh } from '@/components/documents/auto-refresh'
 import {
   FileText,
   ClipboardCheck,
@@ -55,8 +56,13 @@ export default async function DashboardPage() {
     { title: 'Automation Rate', value: `${automationRate}%`, icon: TrendingUp, color: 'text-purple-500' },
   ]
 
+  const hasTransient = recent.some(
+    (d) => d.status === 'queued' || d.status === 'processing'
+  )
+
   return (
     <div className="space-y-8">
+      <AutoRefresh hasTransient={hasTransient} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>

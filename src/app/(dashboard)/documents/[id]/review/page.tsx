@@ -7,6 +7,7 @@ import { StatusBadge } from '@/components/documents/status-badge'
 import { FieldEditor } from '@/components/review/field-editor'
 import { ReviewActions } from '@/components/review/review-actions'
 import { PdfViewer } from '@/components/review/pdf-viewer'
+import { AutoRefresh } from '@/components/documents/auto-refresh'
 
 export default async function ReviewDocumentPage({
   params,
@@ -20,12 +21,14 @@ export default async function ReviewDocumentPage({
   const doc = await getDocumentById(session.user.tenantId, id)
   if (!doc) notFound()
 
+  const isTransient = doc.status === 'queued' || doc.status === 'processing'
   const sortedFields = [...(doc.fields ?? [])].sort(
     (a, b) => a.confidence - b.confidence
   )
 
   return (
     <div className="space-y-6">
+      <AutoRefresh hasTransient={isTransient} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{doc.filename}</h1>
