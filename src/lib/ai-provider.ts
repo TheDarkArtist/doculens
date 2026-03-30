@@ -61,20 +61,47 @@ function createGeminiProvider(): AIProvider {
 
   return {
     async extractStructured(text, schema, systemPrompt) {
+      // Build a schema where each field becomes { value, confidence }
+      // so Gemini returns both in a single call
+      const withConfidence: Record<string, unknown> = {}
+      for (const [key, prop] of Object.entries(schema.properties)) {
+        withConfidence[key] = {
+          type: SchemaType.OBJECT,
+          properties: {
+            value: convertProp(prop, SchemaType),
+            confidence: {
+              type: SchemaType.NUMBER,
+              description: `How confident are you in this extraction? 1.0 = the value is explicitly stated in the document. 0.7 = inferred from context. 0.3 = weak guess. 0.0 = not found at all.`,
+            },
+          },
+          required: ['value', 'confidence'],
+        }
+      }
+
       const model = genAI.getGenerativeModel({
         model: 'gemini-2.5-flash',
         generationConfig: {
           responseMimeType: 'application/json',
-          responseSchema: convertSchema(schema, SchemaType),
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: withConfidence,
+            required: schema.required,
+          },
         },
         systemInstruction: systemPrompt,
       })
 
       const result = await model.generateContent(text)
-      const fields = JSON.parse(result.response.text())
+      const raw = JSON.parse(result.response.text())
 
-      // Text-match confidence: check if extracted value appears in source
-      const fieldConfidences = textMatchConfidence(fields, text)
+      // Unpack { field: { value, confidence } } into separate maps
+      const fields: Record<string, unknown> = {}
+      const fieldConfidences: Record<string, number> = {}
+      for (const [key, entry] of Object.entries(raw)) {
+        const e = entry as { value: unknown; confidence: number }
+        fields[key] = e.value
+        fieldConfidences[key] = Math.min(Math.max(e.confidence ?? 0.5, 0), 1)
+      }
 
       return { fields, fieldConfidences, rawLogprobs: null }
     },
@@ -167,8 +194,7 @@ function createOpenAIProvider(): AIProvider {
         logprobs.map((lp: { token: string; logprob: number }) => ({
           token: lp.token,
           logProbability: lp.logprob,
-        })),
-        null
+        }))
       )
 
       return {
@@ -221,27 +247,27 @@ function createOpenAIProvider(): AIProvider {
   }
 }
 
-function convertSchema(schema: GeminiSchema, SchemaType: Record<string, string>) {
-  function convertProp(prop: GeminiSchemaProperty): unknown {
-    const result: Record<string, unknown> = {
-      type: SchemaType[prop.type],
-      description: prop.description,
-    }
-    if (prop.enum) result.enum = prop.enum
-    if (prop.items) result.items = convertProp(prop.items)
-    if (prop.properties) {
-      result.properties = Object.fromEntries(
-        Object.entries(prop.properties).map(([k, v]) => [k, convertProp(v)])
-      )
-    }
-    if (prop.required) result.required = prop.required
-    return result
+function convertProp(prop: GeminiSchemaProperty, SchemaType: Record<string, string>): unknown {
+  const result: Record<string, unknown> = {
+    type: SchemaType[prop.type],
+    description: prop.description,
   }
+  if (prop.enum) result.enum = prop.enum
+  if (prop.items) result.items = convertProp(prop.items, SchemaType)
+  if (prop.properties) {
+    result.properties = Object.fromEntries(
+      Object.entries(prop.properties).map(([k, v]) => [k, convertProp(v, SchemaType)])
+    )
+  }
+  if (prop.required) result.required = prop.required
+  return result
+}
 
+function convertSchema(schema: GeminiSchema, SchemaType: Record<string, string>) {
   return {
     type: SchemaType.OBJECT,
     properties: Object.fromEntries(
-      Object.entries(schema.properties).map(([k, v]) => [k, convertProp(v)])
+      Object.entries(schema.properties).map(([k, v]) => [k, convertProp(v, SchemaType)])
     ),
     required: schema.required,
   }
@@ -277,23 +303,12 @@ function geminiSchemaToJsonSchema(schema: GeminiSchema): Record<string, unknown>
   }
 }
 
+// OpenAI provider uses logprobs for confidence
 function computeFieldConfidences(
   fields: Record<string, unknown>,
-  logprobTokens: { token: string; logProbability: number }[],
-  avgLogprob: number | null
+  logprobTokens: { token: string; logProbability: number }[]
 ): Record<string, number> {
   const confidences: Record<string, number> = {}
-
-  if (!logprobTokens.length && avgLogprob !== null) {
-    const overall = Math.exp(avgLogprob)
-    for (const key of Object.keys(fields)) {
-      confidences[key] = Math.min(Math.max(overall, 0), 1)
-    }
-    return confidences
-  }
-
-  // Simplified confidence: use average logprob as baseline for all fields
-  // Full token-to-field mapping would use @promptrepo/score
   const avgProb = logprobTokens.length > 0
     ? Math.exp(
         logprobTokens.reduce((sum, t) => sum + t.logProbability, 0) /
@@ -304,56 +319,5 @@ function computeFieldConfidences(
   for (const key of Object.keys(fields)) {
     confidences[key] = Math.min(Math.max(avgProb, 0), 1)
   }
-
-  return confidences
-}
-
-function textMatchConfidence(
-  fields: Record<string, unknown>,
-  sourceText: string
-): Record<string, number> {
-  const confidences: Record<string, number> = {}
-  const sourceLower = sourceText.toLowerCase()
-
-  for (const [key, rawVal] of Object.entries(fields)) {
-    const val = String(rawVal ?? '')
-
-    // Empty or zero values
-    if (!val || val === '0' || val === 'null' || val === 'undefined') {
-      confidences[key] = 0.2
-      continue
-    }
-
-    // Exact match in source
-    if (sourceLower.includes(val.toLowerCase())) {
-      confidences[key] = 0.98
-      continue
-    }
-
-    // Word-level matching for longer values (comma-separated lists, etc.)
-    const words = val
-      .split(/[\s,;|]+/)
-      .map((w) => w.trim().toLowerCase())
-      .filter((w) => w.length > 2)
-
-    if (words.length === 0) {
-      confidences[key] = 0.5
-      continue
-    }
-
-    const matchedWords = words.filter((w) => sourceLower.includes(w))
-    const matchRatio = matchedWords.length / words.length
-
-    if (matchRatio >= 0.8) {
-      confidences[key] = 0.95
-    } else if (matchRatio >= 0.5) {
-      confidences[key] = 0.85
-    } else if (matchRatio >= 0.2) {
-      confidences[key] = 0.7
-    } else {
-      confidences[key] = 0.4
-    }
-  }
-
   return confidences
 }
