@@ -1,4 +1,4 @@
-import { and, eq, desc, count, sql } from 'drizzle-orm'
+import { and, eq, desc, count, isNull } from 'drizzle-orm'
 import { db } from '@/db'
 import { documents } from '@/db/schema/documents'
 import type { CreateDocumentInput, ListDocumentsInput } from './document.types'
@@ -31,7 +31,8 @@ export async function getDocumentById(
   return db.query.documents.findFirst({
     where: and(
       eq(documents.tenantId, tenantId),
-      eq(documents.id, documentId)
+      eq(documents.id, documentId),
+      isNull(documents.deletedAt)
     ),
     with: { fields: true },
   })
@@ -41,7 +42,10 @@ export async function listDocuments(
   tenantId: string,
   input: ListDocumentsInput
 ) {
-  const conditions = [eq(documents.tenantId, tenantId)]
+  const conditions = [
+    eq(documents.tenantId, tenantId),
+    isNull(documents.deletedAt),
+  ]
 
   if (input.status) {
     conditions.push(eq(documents.status, input.status))
@@ -67,6 +71,24 @@ export async function listDocuments(
     total,
     hasMore: input.skip + items.length < total,
   }
+}
+
+export async function softDeleteDocument(
+  tenantId: string,
+  documentId: string
+) {
+  const [doc] = await db
+    .update(documents)
+    .set({ deletedAt: new Date() })
+    .where(
+      and(
+        eq(documents.tenantId, tenantId),
+        eq(documents.id, documentId),
+        isNull(documents.deletedAt)
+      )
+    )
+    .returning()
+  return doc
 }
 
 export async function updateDocumentStatus(

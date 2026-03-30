@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
 
   if (action === 'delete') {
     const result = await db
-      .delete(documents)
+      .update(documents)
+      .set({ deletedAt: new Date() })
       .where(
         and(
           eq(documents.tenantId, tenantId),

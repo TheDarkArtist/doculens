@@ -52,6 +52,7 @@ export const documents = pgTable(
       .$type<Record<string, unknown>>()
       .default({}),
     searchVector: tsvector('search_vector'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

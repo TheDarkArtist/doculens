@@ -4,6 +4,7 @@ import { getTenantById } from '@/features/tenants/tenant.repository'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { ThresholdEditor } from '@/components/settings/threshold-editor'
 import { UserManagement } from '@/components/settings/user-management'
+import { ApiKeyManagement } from '@/components/settings/api-key-management'
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -48,6 +49,8 @@ export default async function SettingsPage() {
 
         <div className="space-y-6">
           <UserManagement />
+
+          <ApiKeyManagement />
 
           <Card>
             <CardHeader>

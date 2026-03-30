@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { auth } from '@/lib/auth'
+import { authenticateRequest } from '@/lib/api-auth'
 import {
   successResponse,
   errorResponse,
@@ -12,8 +12,8 @@ import {
 import * as documentService from '@/features/documents/document.service'
 
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) return unauthorizedResponse()
+  const authResult = await authenticateRequest(req)
+  if (!authResult) return unauthorizedResponse()
 
   const body = await req.json()
   const parsed = createDocumentSchema.safeParse(body)
@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await documentService.createDocument(
-    session.user.tenantId,
-    session.user.id,
+    authResult.tenantId,
+    authResult.userId,
     parsed.data
   )
 
@@ -35,8 +35,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) return unauthorizedResponse()
+  const authResult = await authenticateRequest(req)
+  if (!authResult) return unauthorizedResponse()
 
   const params = Object.fromEntries(req.nextUrl.searchParams)
   const parsed = listDocumentsSchema.safeParse(params)
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   }
 
   const result = await documentService.listDocuments(
-    session.user.tenantId,
+    authResult.tenantId,
     parsed.data
   )
 
