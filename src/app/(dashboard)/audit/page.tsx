@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { listAuditLogs } from '@/features/audit/audit.service'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ScrollText } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Download } from 'lucide-react'
 
 const actionLabels: Record<string, string> = {
   'document.uploaded': 'Uploaded',
@@ -29,7 +30,15 @@ export default async function AuditPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Audit Trail</h1>
-        <Badge variant="secondary">{total} entries</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">{total} entries</Badge>
+          <a href="/api/v1/audit/export">
+            <Button variant="outline" size="sm">
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+          </a>
+        </div>
       </div>
 
       <Card>

@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/documents/status-badge'
 import { ConfidenceBadge } from '@/components/review/confidence-badge'
-import { Eye } from 'lucide-react'
+import { Eye, Download } from 'lucide-react'
 
 export default async function DocumentDetailPage({
   params,
@@ -27,14 +27,28 @@ export default async function DocumentDetailPage({
           <h1 className="text-2xl font-bold">{doc.filename}</h1>
           <StatusBadge status={doc.status} />
         </div>
-        {doc.status === 'needs_review' && (
-          <Link href={`/documents/${doc.id}/review`}>
-            <Button>
-              <Eye className="mr-2 h-4 w-4" />
-              Review
+        <div className="flex gap-2">
+          {doc.status === 'needs_review' && (
+            <Link href={`/documents/${doc.id}/review`}>
+              <Button>
+                <Eye className="mr-2 h-4 w-4" />
+                Review
+              </Button>
+            </Link>
+          )}
+          <a href={`/api/v1/documents/${doc.id}/export?format=csv`}>
+            <Button variant="outline" size="sm">
+              <Download className="mr-2 h-4 w-4" />
+              CSV
             </Button>
-          </Link>
-        )}
+          </a>
+          <a href={`/api/v1/documents/${doc.id}/export?format=json`}>
+            <Button variant="outline" size="sm">
+              <Download className="mr-2 h-4 w-4" />
+              JSON
+            </Button>
+          </a>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
