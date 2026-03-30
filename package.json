@@ -35,6 +35,7 @@
     "lucide-react": "^0.468.0",
     "next": "^16.0.0",
     "next-auth": "5.0.0-beta.30",
+    "nextjs-toploader": "^3.9.17",
     "openai": "^4.80.0",
     "pdf.js-extract": "^0.2.0",
     "pgvector": "^0.2.0",
