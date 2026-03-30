@@ -61,9 +61,7 @@ function createGeminiProvider(): AIProvider {
 
   return {
     async extractStructured(text, schema, systemPrompt) {
-      // Two-pass: extract fields, then ask model to self-assess confidence
-      // Pass 1: Extract
-      const extractModel = genAI.getGenerativeModel({
+      const model = genAI.getGenerativeModel({
         model: 'gemini-2.5-flash',
         generationConfig: {
           responseMimeType: 'application/json',
@@ -72,45 +70,11 @@ function createGeminiProvider(): AIProvider {
         systemInstruction: systemPrompt,
       })
 
-      const extractResult = await extractModel.generateContent(text)
-      const fields = JSON.parse(extractResult.response.text())
+      const result = await model.generateContent(text)
+      const fields = JSON.parse(result.response.text())
 
-      // Pass 2: Self-assess confidence per field
-      const fieldNames = Object.keys(fields)
-      const confProperties: Record<string, unknown> = {}
-      for (const name of fieldNames) {
-        confProperties[name] = {
-          type: SchemaType.NUMBER,
-          description: `Confidence 0.0-1.0 that "${name}" was correctly extracted. 1.0 = certain the value is exactly right. 0.5 = guessing. 0.0 = no evidence in the document.`,
-        }
-      }
-
-      const confModel = genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: SchemaType.OBJECT,
-            properties: confProperties,
-            required: fieldNames,
-          },
-        },
-      })
-
-      let fieldConfidences: Record<string, number> = {}
-      try {
-        const confResult = await confModel.generateContent(
-          `You extracted these fields from a document. Rate your confidence (0.0-1.0) for each field — how certain are you the extracted value is correct based on the source text?\n\nSource text:\n${text.slice(0, 2000)}\n\nExtracted fields:\n${JSON.stringify(fields, null, 2)}`
-        )
-        fieldConfidences = JSON.parse(confResult.response.text())
-      } catch {
-        // Fallback: heuristic confidence
-        for (const key of fieldNames) {
-          const val = fields[key]
-          const hasValue = val !== null && val !== '' && val !== undefined && val !== 0
-          fieldConfidences[key] = hasValue ? 0.85 : 0.3
-        }
-      }
+      // Text-match confidence: check if extracted value appears in source
+      const fieldConfidences = textMatchConfidence(fields, text)
 
       return { fields, fieldConfidences, rawLogprobs: null }
     },
@@ -339,6 +303,56 @@ function computeFieldConfidences(
 
   for (const key of Object.keys(fields)) {
     confidences[key] = Math.min(Math.max(avgProb, 0), 1)
+  }
+
+  return confidences
+}
+
+function textMatchConfidence(
+  fields: Record<string, unknown>,
+  sourceText: string
+): Record<string, number> {
+  const confidences: Record<string, number> = {}
+  const sourceLower = sourceText.toLowerCase()
+
+  for (const [key, rawVal] of Object.entries(fields)) {
+    const val = String(rawVal ?? '')
+
+    // Empty or zero values
+    if (!val || val === '0' || val === 'null' || val === 'undefined') {
+      confidences[key] = 0.2
+      continue
+    }
+
+    // Exact match in source
+    if (sourceLower.includes(val.toLowerCase())) {
+      confidences[key] = 0.98
+      continue
+    }
+
+    // Word-level matching for longer values (comma-separated lists, etc.)
+    const words = val
+      .split(/[\s,;|]+/)
+      .map((w) => w.trim().toLowerCase())
+      .filter((w) => w.length > 2)
+
+    if (words.length === 0) {
+      confidences[key] = 0.5
+      continue
+    }
+
+    const matchedWords = words.filter((w) => sourceLower.includes(w))
+    const matchRatio = matchedWords.length / words.length
+
+    if (matchRatio >= 0.8) {
+      confidences[key] = 0.95
+    } else if (matchRatio >= 0.5) {
+      confidences[key] = 0.85
+    } else if (matchRatio >= 0.2) {
+      confidences[key] = 0.7
+    } else {
+      confidences[key] = 0.4
+    }
   }
 
   return confidences
