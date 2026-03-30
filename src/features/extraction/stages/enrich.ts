@@ -25,20 +25,23 @@ export async function enrichFields(
   // Chunk text (simple approach: one chunk per document for now)
   const chunks = chunkText(fieldText, 500, 50)
 
-  const provider = getAIProvider()
-
-  // Generate embeddings in batch
+  // Generate embeddings in batch (skip if AI provider unavailable)
   if (chunks.length > 0) {
-    const embeddings = await provider.embedBatch(chunks)
+    try {
+      const provider = getAIProvider()
+      const embeddings = await provider.embedBatch(chunks)
 
-    const embeddingRows = chunks.map((chunk, i) => ({
-      documentId,
-      chunkText: chunk,
-      chunkIndex: i,
-      embedding: embeddings[i],
-    }))
+      const embeddingRows = chunks.map((chunk, i) => ({
+        documentId,
+        chunkText: chunk,
+        chunkIndex: i,
+        embedding: embeddings[i],
+      }))
 
-    await db.insert(documentEmbeddings).values(embeddingRows)
+      await db.insert(documentEmbeddings).values(embeddingRows)
+    } catch (e) {
+      console.warn('[enrich] Embedding generation failed (no API key?):', e)
+    }
   }
 }
 

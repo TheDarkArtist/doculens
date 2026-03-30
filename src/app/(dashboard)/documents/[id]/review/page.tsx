@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/documents/status-badge'
 import { FieldEditor } from '@/components/review/field-editor'
 import { ReviewActions } from '@/components/review/review-actions'
+import { PdfViewer } from '@/components/review/pdf-viewer'
 
 export default async function ReviewDocumentPage({
   params,
@@ -41,43 +42,7 @@ export default async function ReviewDocumentPage({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Document Info</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Status</span>
-              <StatusBadge status={doc.status} />
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">File Size</span>
-              <span>{formatSize(doc.fileSize)}</span>
-            </div>
-            {doc.classificationConfidence && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  Classification Confidence
-                </span>
-                <span>
-                  {(doc.classificationConfidence * 100).toFixed(1)}%
-                </span>
-              </div>
-            )}
-            {doc.pageCount && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Pages</span>
-                <span>{doc.pageCount}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Uploaded</span>
-              <span>
-                {new Date(doc.createdAt).toLocaleString()}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        <PdfViewer documentId={doc.id} />
 
         <Card>
           <CardHeader>

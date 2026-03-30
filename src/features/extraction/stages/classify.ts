@@ -23,22 +23,38 @@ export async function classifyDocument(
     return { templateId: null, confidence: 0 }
   }
 
-  const provider = getAIProvider()
-  const result = await provider.classify(firstPageText, templateNames)
+  try {
+    const provider = getAIProvider()
+    const result = await provider.classify(firstPageText, templateNames)
 
-  const matchedTemplate = templates.find(
-    (t) => t.slug === result.documentType
-  )
+    const matchedTemplate = templates.find(
+      (t) => t.slug === result.documentType
+    )
 
-  if (matchedTemplate && result.confidence >= 0.8) {
-    await updateDocumentStatus(tenantId, documentId, 'processing', {
-      templateId: matchedTemplate.id,
-      classificationConfidence: result.confidence,
-    })
-  }
+    if (matchedTemplate && result.confidence >= 0.8) {
+      await updateDocumentStatus(tenantId, documentId, 'processing', {
+        templateId: matchedTemplate.id,
+        classificationConfidence: result.confidence,
+      })
+    }
 
-  return {
-    templateId: matchedTemplate?.id ?? null,
-    confidence: result.confidence,
+    return {
+      templateId: matchedTemplate?.id ?? null,
+      confidence: result.confidence,
+    }
+  } catch (e) {
+    console.warn('[classify] AI classification failed, using heuristic:', e)
+    // Fallback: match template by keyword in text
+    const textLower = firstPageText.toLowerCase()
+    const matched = templates.find((t) => textLower.includes(t.slug.replace('-', ' ')))
+      ?? templates.find((t) => textLower.includes(t.name.toLowerCase().split(' ')[0]))
+    if (matched) {
+      await updateDocumentStatus(tenantId, documentId, 'processing', {
+        templateId: matched.id,
+        classificationConfidence: 0.6,
+      })
+      return { templateId: matched.id, confidence: 0.6 }
+    }
+    return { templateId: null, confidence: 0 }
   }
 }

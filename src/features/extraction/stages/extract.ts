@@ -29,23 +29,50 @@ export async function extractFields(
 
   if (!allText) return { fieldCount: 0 }
 
-  const schema = buildGeminiSchema(template.schema.fields)
-  const provider = getAIProvider()
+  let fieldRows: {
+    documentId: string
+    fieldName: string
+    fieldValue: string
+    fieldType: string
+    confidence: number
+    isAutoApproved: boolean
+  }[]
 
-  const systemPrompt = `Extract structured data from this document. The document is a "${template.name}". Extract all fields accurately. If a field is not found, use null or empty string.`
+  try {
+    const schema = buildGeminiSchema(template.schema.fields)
+    const provider = getAIProvider()
+    const systemPrompt = `Extract structured data from this document. The document is a "${template.name}". Extract all fields accurately. If a field is not found, use null or empty string.`
+    const result = await provider.extractStructured(allText, schema, systemPrompt)
 
-  const result = await provider.extractStructured(allText, schema, systemPrompt)
-
-  const fieldRows = template.schema.fields
-    .filter((f) => result.fields[f.name] !== undefined)
-    .map((f) => ({
-      documentId,
-      fieldName: f.name,
-      fieldValue: String(result.fields[f.name] ?? ''),
-      fieldType: f.type,
-      confidence: result.fieldConfidences[f.name] ?? 0.5,
-      isAutoApproved: false,
-    }))
+    fieldRows = template.schema.fields
+      .filter((f) => result.fields[f.name] !== undefined)
+      .map((f) => ({
+        documentId,
+        fieldName: f.name,
+        fieldValue: String(result.fields[f.name] ?? ''),
+        fieldType: f.type,
+        confidence: result.fieldConfidences[f.name] ?? 0.5,
+        isAutoApproved: false,
+      }))
+  } catch (e) {
+    console.warn('[extract] AI extraction failed, using regex fallback:', e)
+    // Fallback: extract key-value pairs from text using simple patterns
+    fieldRows = template.schema.fields
+      .map((f) => {
+        const regex = new RegExp(`${f.name.replace(/_/g, '[_ ]')}[:\\s]+([^\\n]+)`, 'i')
+        const altRegex = new RegExp(`${f.description}[:\\s]+([^\\n]+)`, 'i')
+        const match = allText.match(regex) ?? allText.match(altRegex)
+        return {
+          documentId,
+          fieldName: f.name,
+          fieldValue: match?.[1]?.trim() ?? '',
+          fieldType: f.type,
+          confidence: match ? 0.4 : 0.1,
+          isAutoApproved: false,
+        }
+      })
+      .filter((f) => f.fieldValue.length > 0)
+  }
 
   if (fieldRows.length > 0) {
     await db.insert(extractedFields).values(fieldRows)

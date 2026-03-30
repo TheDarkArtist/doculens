@@ -91,7 +91,7 @@ async function seed() {
       filename: doc.filename,
       mimeType: doc.mimeType,
       fileSize: doc.fileSize,
-      storageKey: `${tenant.id}/demo/${doc.filename}`,
+      storageKey: `demo/${doc.filename}`,
       status: doc.status,
       classificationConfidence: 0.95,
       pageCount: Math.floor(Math.random() * 3) + 1,
