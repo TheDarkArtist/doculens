@@ -41,7 +41,14 @@ export async function extractFields(
   try {
     const schema = buildGeminiSchema(template.schema.fields)
     const provider = getAIProvider()
-    const systemPrompt = `Extract structured data from this document. The document is a "${template.name}". Extract all fields accurately. If a field is not found, use null or empty string.`
+    const systemPrompt = `Extract structured data from this document. The document is a "${template.name}".
+
+Rules:
+- Extract all fields accurately from the document text.
+- For fields that can be inferred (e.g. years of experience from work history dates), calculate the value.
+- For array fields, return comma-separated values.
+- If a field is genuinely not present and cannot be inferred, use an empty string.
+- Never guess or fabricate data that isn't supported by the document.`
     const result = await provider.extractStructured(allText, schema, systemPrompt)
 
     fieldRows = template.schema.fields

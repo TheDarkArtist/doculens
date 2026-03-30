@@ -61,9 +61,9 @@ function createGeminiProvider(): AIProvider {
 
   return {
     async extractStructured(text, schema, systemPrompt) {
-      // Logprobs not available on Gemini 2.5 Flash (free API)
-      // Use structured output only, derive confidence from model's self-assessment
-      const model = genAI.getGenerativeModel({
+      // Two-pass: extract fields, then ask model to self-assess confidence
+      // Pass 1: Extract
+      const extractModel = genAI.getGenerativeModel({
         model: 'gemini-2.5-flash',
         generationConfig: {
           responseMimeType: 'application/json',
@@ -72,17 +72,44 @@ function createGeminiProvider(): AIProvider {
         systemInstruction: systemPrompt,
       })
 
-      const result = await model.generateContent(text)
-      const fields = JSON.parse(result.response.text())
+      const extractResult = await extractModel.generateContent(text)
+      const fields = JSON.parse(extractResult.response.text())
 
-      // Without logprobs, assign high confidence since Gemini structured
-      // output is schema-enforced — the model either returns a value or doesn't
-      const fieldConfidences: Record<string, number> = {}
-      for (const key of Object.keys(fields)) {
-        const val = fields[key]
-        // Empty/null values get low confidence, present values get high
-        const hasValue = val !== null && val !== '' && val !== undefined
-        fieldConfidences[key] = hasValue ? 0.92 + Math.random() * 0.07 : 0.3
+      // Pass 2: Self-assess confidence per field
+      const fieldNames = Object.keys(fields)
+      const confProperties: Record<string, unknown> = {}
+      for (const name of fieldNames) {
+        confProperties[name] = {
+          type: SchemaType.NUMBER,
+          description: `Confidence 0.0-1.0 that "${name}" was correctly extracted. 1.0 = certain the value is exactly right. 0.5 = guessing. 0.0 = no evidence in the document.`,
+        }
+      }
+
+      const confModel = genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: confProperties,
+            required: fieldNames,
+          },
+        },
+      })
+
+      let fieldConfidences: Record<string, number> = {}
+      try {
+        const confResult = await confModel.generateContent(
+          `You extracted these fields from a document. Rate your confidence (0.0-1.0) for each field — how certain are you the extracted value is correct based on the source text?\n\nSource text:\n${text.slice(0, 2000)}\n\nExtracted fields:\n${JSON.stringify(fields, null, 2)}`
+        )
+        fieldConfidences = JSON.parse(confResult.response.text())
+      } catch {
+        // Fallback: heuristic confidence
+        for (const key of fieldNames) {
+          const val = fields[key]
+          const hasValue = val !== null && val !== '' && val !== undefined && val !== 0
+          fieldConfidences[key] = hasValue ? 0.85 : 0.3
+        }
       }
 
       return { fields, fieldConfidences, rawLogprobs: null }
