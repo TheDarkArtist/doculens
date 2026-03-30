@@ -2,9 +2,11 @@ import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { listDocuments } from '@/features/documents/document.repository'
+import { listTemplates } from '@/features/templates/template.repository'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { StatusBadge } from '@/components/documents/status-badge'
+import { DocumentTable } from '@/components/documents/document-table'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Upload, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -30,15 +32,18 @@ export default async function DocumentsPage({
   const limit = 20
   const skip = (page - 1) * limit
 
-  const { items, total, hasMore } = await listDocuments(
-    session.user.tenantId,
-    { skip, limit, status }
-  )
+  const [{ items, total, hasMore }, templates] = await Promise.all([
+    listDocuments(session.user.tenantId, { skip, limit, status }),
+    listTemplates(session.user.tenantId),
+  ])
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Documents</h1>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Documents</h1>
+          <p className="text-muted-foreground mt-1">{total} total documents</p>
+        </div>
         <Link href="/documents/upload">
           <Button>
             <Upload className="mr-2 h-4 w-4" />
@@ -67,50 +72,20 @@ export default async function DocumentsPage({
       <Card>
         <CardContent className="p-0">
           {items.length === 0 ? (
-            <div className="p-6 text-center text-muted-foreground">
-              No documents found{status ? ` with status "${status.replace('_', ' ')}"` : ''}.
-            </div>
+            <EmptyState
+              icon={FileText}
+              title="No documents found"
+              description={status ? `No documents with status "${status.replace('_', ' ')}"` : 'Upload your first document to get started'}
+              action={!status ? { label: 'Upload Document', href: '/documents/upload' } : undefined}
+            />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="p-3 font-medium">Filename</th>
-                    <th className="p-3 font-medium">Status</th>
-                    <th className="p-3 font-medium">Type</th>
-                    <th className="p-3 font-medium">Size</th>
-                    <th className="p-3 font-medium">Uploaded</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((doc) => (
-                    <tr key={doc.id} className="border-b last:border-0 hover:bg-muted/50">
-                      <td className="p-3">
-                        <Link
-                          href={`/documents/${doc.id}`}
-                          className="flex items-center gap-2 hover:underline"
-                        >
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          {doc.filename}
-                        </Link>
-                      </td>
-                      <td className="p-3">
-                        <StatusBadge status={doc.status} />
-                      </td>
-                      <td className="p-3 text-muted-foreground">
-                        {doc.mimeType.split('/')[1]?.toUpperCase() ?? doc.mimeType}
-                      </td>
-                      <td className="p-3 text-muted-foreground">
-                        {formatSize(doc.fileSize)}
-                      </td>
-                      <td className="p-3 text-muted-foreground">
-                        {new Date(doc.createdAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DocumentTable
+              documents={items.map((d) => ({
+                ...d,
+                createdAt: d.createdAt.toISOString(),
+              }))}
+              templates={templates.map((t) => ({ id: t.id, name: t.name }))}
+            />
           )}
         </CardContent>
       </Card>
@@ -136,10 +111,4 @@ export default async function DocumentsPage({
       )}
     </div>
   )
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }

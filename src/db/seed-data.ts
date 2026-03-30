@@ -49,14 +49,17 @@ export function generateDemoDocuments(): DemoDoc[] {
       createdAt: daysAgo(Math.floor(Math.random() * 28) + 1),
       fields: [
         { name: 'vendor_name', value: vendor, type: 'string', confidence: baseConf + randomBetween(-0.02, 0.02) },
+        { name: 'vendor_address', value: ['123 Manufacturing Ave, Detroit, MI 48201', '456 Innovation Blvd, Austin, TX 78701', '789 Harvest Rd, Portland, OR 97201', '321 Freight Way, Memphis, TN 38103', '555 Data Dr, San Francisco, CA 94105', '100 Tech Park, Boston, MA 02101', '888 Silicon Ct, San Jose, CA 95112', '200 Summit Dr, Denver, CO 80201'][i % 8], type: 'string', confidence: baseConf + randomBetween(-0.03, 0.01) },
         { name: 'invoice_number', value: invNum, type: 'string', confidence: baseConf + randomBetween(-0.01, 0.01) },
         { name: 'invoice_date', value: `2026-03-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`, type: 'date', confidence: baseConf + randomBetween(-0.03, 0.01) },
         { name: 'due_date', value: `2026-04-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`, type: 'date', confidence: baseConf + randomBetween(-0.02, 0.01) },
-        { name: 'subtotal', value: String(subtotal), type: 'currency', confidence: baseConf + randomBetween(-0.05, 0.02) },
-        { name: 'tax_amount', value: String(tax), type: 'currency', confidence: baseConf + randomBetween(-0.04, 0.01) },
-        { name: 'total_amount', value: String(total), type: 'currency', confidence: baseConf + randomBetween(-0.03, 0.02) },
+        { name: 'subtotal', value: `$${subtotal.toLocaleString()}`, type: 'currency', confidence: baseConf + randomBetween(-0.05, 0.02) },
+        { name: 'tax_amount', value: `$${tax.toLocaleString()}`, type: 'currency', confidence: baseConf + randomBetween(-0.04, 0.01) },
+        { name: 'tax_rate', value: '8%', type: 'number', confidence: baseConf + randomBetween(-0.02, 0.01) },
+        { name: 'total_amount', value: `$${total.toLocaleString()}`, type: 'currency', confidence: baseConf + randomBetween(-0.03, 0.02) },
         { name: 'currency', value: 'USD', type: 'string', confidence: 0.99 },
         { name: 'payment_terms', value: 'Net 30', type: 'string', confidence: baseConf + randomBetween(-0.05, 0.02) },
+        { name: 'purchase_order_number', value: i < 6 ? `PO-${2026}${String(i + 100).padStart(4, '0')}` : '', type: 'string', confidence: i < 6 ? baseConf + randomBetween(-0.02, 0.01) : 0.3 },
       ],
     })
   }
