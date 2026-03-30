@@ -52,7 +52,7 @@ export default async function SettingsPage() {
 
           <ThresholdEditor initial={tenant.settings} />
 
-          <DataRetention />
+          <DataRetention initial={tenant.settings.retention_days} />
 
           <Card>
             <CardHeader>

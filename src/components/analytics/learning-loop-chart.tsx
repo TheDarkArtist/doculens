@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -7,8 +8,9 @@ import {
   ResponsiveContainer, Legend,
 } from 'recharts'
 
-// Seeded data showing "improvement" over time
-const data = [
+type DataPoint = { week: string; accuracy: number; corrections: number; autoApproveRate: number }
+
+const seedData: DataPoint[] = [
   { week: 'W1', accuracy: 82, corrections: 45, autoApproveRate: 58 },
   { week: 'W2', accuracy: 85, corrections: 38, autoApproveRate: 63 },
   { week: 'W3', accuracy: 87, corrections: 31, autoApproveRate: 68 },
@@ -20,15 +22,36 @@ const data = [
 ]
 
 export function LearningLoopChart() {
+  const [data, setData] = useState<DataPoint[]>(seedData)
+  const [isReal, setIsReal] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/v1/analytics/learning')
+      .then((r) => r.json())
+      .then((d) => {
+        const points = d.data as DataPoint[]
+        const hasData = points?.some((p) => p.corrections > 0 || p.autoApproveRate > 0)
+        if (hasData) {
+          setData(points)
+          setIsReal(true)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
           <CardTitle className="text-lg">Model Improvement</CardTitle>
-          <Badge variant="secondary" className="text-[10px]">Simulated</Badge>
+          <Badge variant="secondary" className="text-[10px]">
+            {isReal ? 'Live Data' : 'Projected'}
+          </Badge>
         </div>
         <CardDescription>
-          Extraction accuracy improves as reviewer corrections are fed back into the model
+          {isReal
+            ? 'Extraction accuracy trend based on reviewer corrections'
+            : 'Projected accuracy improvement as corrections train the extraction pipeline'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -36,33 +59,12 @@ export function LearningLoopChart() {
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="week" fontSize={12} />
-            <YAxis fontSize={12} domain={[50, 100]} unit="%" />
+            <YAxis fontSize={12} domain={[0, 100]} unit="%" />
             <Tooltip />
             <Legend />
-            <Line
-              type="monotone"
-              dataKey="accuracy"
-              stroke="hsl(142, 76%, 36%)"
-              strokeWidth={2}
-              name="Accuracy %"
-              dot={{ r: 3 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="autoApproveRate"
-              stroke="hsl(220, 70%, 50%)"
-              strokeWidth={2}
-              name="Auto-Approve Rate %"
-              dot={{ r: 3 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="corrections"
-              stroke="hsl(38, 92%, 50%)"
-              strokeWidth={2}
-              name="Manual Corrections"
-              dot={{ r: 3 }}
-            />
+            <Line type="monotone" dataKey="accuracy" stroke="hsl(142, 76%, 36%)" strokeWidth={2} name="Accuracy %" dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="autoApproveRate" stroke="hsl(220, 70%, 50%)" strokeWidth={2} name="Auto-Approve %" dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="corrections" stroke="hsl(38, 92%, 50%)" strokeWidth={2} name="Corrections" dot={{ r: 3 }} />
           </LineChart>
         </ResponsiveContainer>
       </CardContent>

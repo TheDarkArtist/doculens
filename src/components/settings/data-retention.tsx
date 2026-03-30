@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Save, Clock } from 'lucide-react'
+import { Save, Clock, CheckCircle, Loader2 } from 'lucide-react'
 
 const retentionOptions = [
   { value: 30, label: '30 days' },
@@ -16,18 +15,33 @@ const retentionOptions = [
   { value: 0, label: 'Indefinite' },
 ]
 
-export function DataRetention() {
-  const [retention, setRetention] = useState(90)
+export function DataRetention({
+  initial,
+}: {
+  initial?: number
+}) {
+  const [retention, setRetention] = useState(initial ?? 90)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    await fetch('/api/v1/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ retention_days: retention }),
+    })
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <CardTitle className="text-lg">Data Retention</CardTitle>
-          <Badge variant="secondary" className="text-[10px]">Enterprise</Badge>
-        </div>
+        <CardTitle className="text-lg">Data Retention</CardTitle>
         <CardDescription>
-          Auto-delete processed documents after a configurable period
+          Auto-delete completed documents after a set period. Runs daily at 3 AM.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -51,12 +65,18 @@ export function DataRetention() {
         </div>
         <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
           <Clock className="h-4 w-4 shrink-0" />
-          Documents older than {retention || '∞'} days will be automatically purged.
-          Audit logs are retained indefinitely for compliance.
+          {retention > 0
+            ? `Completed documents older than ${retention} days will be automatically purged. Audit logs are retained indefinitely.`
+            : 'Documents will be retained indefinitely. No automatic purging.'}
         </div>
-        <Button className="w-full" variant="outline" disabled>
-          <Save className="mr-2 h-4 w-4" />
-          Save (requires Enterprise plan)
+        <Button onClick={handleSave} disabled={saving} className="w-full">
+          {saving ? (
+            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+          ) : saved ? (
+            <><CheckCircle className="mr-2 h-4 w-4" />Saved</>
+          ) : (
+            <><Save className="mr-2 h-4 w-4" />Save Retention Policy</>
+          )}
         </Button>
       </CardContent>
     </Card>

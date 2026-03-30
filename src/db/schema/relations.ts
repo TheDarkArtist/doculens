@@ -8,6 +8,7 @@ import { extractionTemplates } from './extraction-templates'
 import { auditLogs } from './audit-logs'
 import { apiKeys } from './api-keys'
 import { accounts, sessions } from './auth'
+import { webhooks } from './webhooks'
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
@@ -15,6 +16,14 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   templates: many(extractionTemplates),
   auditLogs: many(auditLogs),
   apiKeys: many(apiKeys),
+  webhooks: many(webhooks),
+}))
+
+export const webhooksRelations = relations(webhooks, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [webhooks.tenantId],
+    references: [tenants.id],
+  }),
 }))
 
 export const usersRelations = relations(users, ({ one, many }) => ({
