@@ -54,8 +54,20 @@ export function TemplateEditor({
   }
 
   async function handleSave() {
-    if (!name || !slug || fields.length === 0) {
-      setError('Name, slug, and at least one field are required')
+    if (!name.trim()) { setError('Template name is required'); return }
+    if (!slug.trim()) { setError('Slug is required'); return }
+    if (fields.length === 0) { setError('Add at least one field'); return }
+
+    const emptyNames = fields.filter((f) => !f.name.trim())
+    if (emptyNames.length > 0) { setError('All fields must have a name'); return }
+
+    const names = fields.map((f) => f.name.trim().toLowerCase())
+    const dupes = names.filter((n, i) => names.indexOf(n) !== i)
+    if (dupes.length > 0) { setError(`Duplicate field name: ${dupes[0]}`); return }
+
+    const invalidNames = fields.filter((f) => !/^[a-z][a-z0-9_]*$/.test(f.name.trim()))
+    if (invalidNames.length > 0) {
+      setError(`Field "${invalidNames[0].name}" must be lowercase with underscores (e.g. vendor_name)`)
       return
     }
 

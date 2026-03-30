@@ -26,20 +26,43 @@ export function WebhookConfig() {
     fetch('/api/v1/webhooks').then((r) => r.json()).then((d) => setHooks(d.data ?? []))
   }, [])
 
+  const [error, setError] = useState<string | null>(null)
+
   async function addWebhook(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setSaving(true)
+    setError(null)
+
     const form = new FormData(e.currentTarget)
+    const url = (form.get('url') as string).trim()
+
+    try { new URL(url) } catch {
+      setError('Enter a valid URL (e.g. https://api.example.com/webhook)')
+      return
+    }
+    if (!url.startsWith('https://') && !url.startsWith('http://localhost')) {
+      setError('Webhook URL must use HTTPS')
+      return
+    }
+    if (selectedEvents.size === 0) {
+      setError('Select at least one event')
+      return
+    }
+
+    setSaving(true)
     const res = await fetch('/api/v1/webhooks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: form.get('url'), events: Array.from(selectedEvents) }),
+      body: JSON.stringify({ url, events: Array.from(selectedEvents) }),
     })
     if (res.ok) {
       const { data } = await res.json()
       setHooks([...hooks, data])
       setShowForm(false)
       setSelectedEvents(new Set(['document.processed']))
+      setError(null)
+    } else {
+      const data = await res.json()
+      setError(data.error?.message ?? 'Failed to create webhook')
     }
     setSaving(false)
   }
@@ -85,12 +108,19 @@ export function WebhookConfig() {
       <CardContent className="space-y-3">
         {showForm && (
           <form onSubmit={addWebhook} className="rounded-lg border bg-muted/50 p-4 space-y-3 animate-fade">
+            {error && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
+                {error}
+              </div>
+            )}
             <div className="space-y-1">
               <Label className="text-xs">Endpoint URL</Label>
-              <Input name="url" required placeholder="https://api.yourapp.com/webhooks" className="h-9" />
+              <Input name="url" required placeholder="https://api.yourapp.com/webhooks" className="h-9" type="url" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Events</Label>
+              <Label className="text-xs">
+                Events {selectedEvents.size === 0 && <span className="text-destructive">(select at least one)</span>}
+              </Label>
               <div className="flex flex-wrap gap-1.5">
                 {availableEvents.map((ev) => (
                   <button

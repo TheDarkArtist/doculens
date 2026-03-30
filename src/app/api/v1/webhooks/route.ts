@@ -33,6 +33,30 @@ export async function POST(req: NextRequest) {
 
   if (!url) return errorResponse('VALIDATION_ERROR', 'URL is required')
 
+  try {
+    new URL(url)
+  } catch {
+    return errorResponse('VALIDATION_ERROR', 'URL must be a valid HTTPS endpoint')
+  }
+
+  if (!url.startsWith('https://') && !url.startsWith('http://localhost')) {
+    return errorResponse('VALIDATION_ERROR', 'Webhook URL must use HTTPS')
+  }
+
+  const validEvents = [
+    'document.uploaded', 'document.processed', 'document.auto_approved',
+    'document.approved', 'document.rejected', 'field.corrected',
+  ]
+
+  if (!Array.isArray(events) || events.length === 0) {
+    return errorResponse('VALIDATION_ERROR', 'Select at least one event')
+  }
+
+  const invalidEvents = events.filter((e: string) => !validEvents.includes(e))
+  if (invalidEvents.length > 0) {
+    return errorResponse('VALIDATION_ERROR', `Invalid events: ${invalidEvents.join(', ')}`)
+  }
+
   const secret = randomBytes(32).toString('hex')
 
   const [hook] = await db
