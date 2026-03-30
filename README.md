@@ -18,7 +18,7 @@ Upload any document (invoice, ID, medical record, contract) and DocuLens AI:
 
 ## Key Features
 
-- **6-stage async pipeline** — queue-based processing with real-time status updates
+- **6-stage serverless pipeline** — Inngest step functions with real-time status via Pusher
 - **HITL review** — side-by-side PDF viewer with editable extracted fields
 - **Field-level confidence** — auto-approve/review/flag thresholds per tenant
 - **Hybrid search** — semantic + full-text across all extracted content
@@ -28,7 +28,7 @@ Upload any document (invoice, ID, medical record, contract) and DocuLens AI:
 
 ## Tech Stack
 
-Next.js 16, TypeScript, PostgreSQL + pgvector, BullMQ + Redis, OpenAI, MinIO/S3, Tailwind + shadcn/ui, Socket.io, Recharts
+Next.js 16, TypeScript, PostgreSQL + pgvector, Inngest, Gemini/OpenAI, Auth.js, MinIO/R2, Pusher, Tailwind + shadcn/ui, Recharts
 
 ## Quick Start
 
@@ -43,7 +43,7 @@ pnpm install
 
 # 3. Set up environment
 cp .env.example .env
-# Add your OPENAI_API_KEY to .env
+# Add your GOOGLE_AI_API_KEY (free) or OPENAI_API_KEY to .env
 
 # 4. Set up database
 pnpm db:push
@@ -51,7 +51,7 @@ pnpm db:seed
 
 # 5. Start the app
 pnpm dev          # Terminal 1: Next.js
-pnpm worker:dev   # Terminal 2: BullMQ worker
+pnpm inngest:dev  # Terminal 2: Inngest dev server
 
 # Open http://localhost:3000
 ```
@@ -60,9 +60,9 @@ pnpm worker:dev   # Terminal 2: BullMQ worker
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@meridian.demo | demo1234 |
-| Reviewer | reviewer@meridian.demo | demo1234 |
-| Viewer | viewer@meridian.demo | demo1234 |
+| Admin | admin@tdacorp.demo | demo1234 |
+| Reviewer | reviewer@tdacorp.demo | demo1234 |
+| Viewer | viewer@tdacorp.demo | demo1234 |
 
 ## Documentation
 

@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['sharp', 'tesseract.js', 'pdf-parse', 'bullmq'],
+  serverExternalPackages: ['sharp', 'tesseract.js', 'pdf.js-extract'],
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
