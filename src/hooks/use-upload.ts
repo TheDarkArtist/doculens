@@ -36,10 +36,13 @@ export function useUpload() {
 
       setState((s) => ({ ...s, progress: 30 }))
 
+      const uploadHeaders: Record<string, string> = { 'Content-Type': file.type }
+      if (data.headers) Object.assign(uploadHeaders, data.headers)
+
       const uploadRes = await fetch(data.url, {
-        method: 'PUT',
+        method: data.headers ? 'POST' : 'PUT',
         body: file,
-        headers: { 'Content-Type': file.type },
+        headers: uploadHeaders,
       })
 
       if (!uploadRes.ok) throw new Error('Failed to upload file')

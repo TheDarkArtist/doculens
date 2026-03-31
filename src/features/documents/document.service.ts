@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid'
-import { getPresignedUploadUrl } from '@/lib/s3'
+import { getPresignedUploadUrl } from '@/lib/storage'
 import { ok, err, type Result } from '@/lib/result'
 import { inngest } from '@/inngest/client'
 import * as documentRepo from './document.repository'

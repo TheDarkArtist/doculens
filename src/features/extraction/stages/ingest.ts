@@ -1,6 +1,4 @@
-import { GetObjectCommand } from '@aws-sdk/client-s3'
-import { s3 } from '@/lib/s3'
-import { env } from '@/lib/env'
+import { downloadFile } from '@/lib/storage'
 import { updateDocumentStatus } from '@/features/documents/document.repository'
 import { publishDocumentStatus } from '@/lib/pusher'
 import type { NormalizedDocument } from '../extraction.types'
@@ -16,19 +14,12 @@ export async function ingestDocument(
     processingStartedAt: new Date(),
   })
 
-  const command = new GetObjectCommand({
-    Bucket: env.S3_BUCKET,
-    Key: storageKey,
-  })
-  const response = await s3.send(command)
-  const bodyBytes = await response.Body!.transformToByteArray()
-  const buffer = Buffer.from(bodyBytes)
+  const buffer = await downloadFile(storageKey)
 
   if (mimeType === 'application/pdf') {
     return extractPdfPages(buffer)
   }
 
-  // Image documents — treat as single page with no text layer
   return {
     pages: [{ pageNumber: 1, text: null, hasTextLayer: false }],
     format: 'image',

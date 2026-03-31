@@ -6,7 +6,7 @@ import {
   notFoundResponse,
 } from '@/lib/api-response'
 import { getDocumentById } from '@/features/documents/document.repository'
-import { getPresignedDownloadUrl } from '@/lib/s3'
+import { getPresignedDownloadUrl } from '@/lib/storage'
 
 export async function GET(
   _req: NextRequest,
