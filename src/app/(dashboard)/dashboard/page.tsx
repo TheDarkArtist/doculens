@@ -56,9 +56,13 @@ export default async function DashboardPage() {
     { title: 'Automation Rate', value: `${automationRate}%`, icon: TrendingUp, color: 'text-purple-500' },
   ]
 
-  const hasTransient = recent.some(
-    (d) => d.status === 'queued' || d.status === 'processing'
-  )
+  const TRANSIENT_FRESH_MS = 10 * 60 * 1000
+  const now = Date.now()
+  const hasTransient = recent.some((d) => {
+    if (d.status !== 'queued' && d.status !== 'processing') return false
+    const updated = (d.updatedAt ?? d.createdAt).getTime()
+    return now - updated < TRANSIENT_FRESH_MS
+  })
 
   return (
     <div className="space-y-8">

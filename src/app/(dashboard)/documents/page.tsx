@@ -38,9 +38,13 @@ export default async function DocumentsPage({
     listTemplates(session.user.tenantId),
   ])
 
-  const hasTransient = items.some(
-    (d) => d.status === 'queued' || d.status === 'processing'
-  )
+  const TRANSIENT_FRESH_MS = 10 * 60 * 1000
+  const nowMs = Date.now()
+  const hasTransient = items.some((d) => {
+    if (d.status !== 'queued' && d.status !== 'processing') return false
+    const updated = (d.updatedAt ?? d.createdAt).getTime()
+    return nowMs - updated < TRANSIENT_FRESH_MS
+  })
 
   return (
     <div className="space-y-6">

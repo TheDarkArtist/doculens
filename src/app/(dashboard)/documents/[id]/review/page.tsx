@@ -21,7 +21,12 @@ export default async function ReviewDocumentPage({
   const doc = await getDocumentById(session.user.tenantId, id)
   if (!doc) notFound()
 
-  const isTransient = doc.status === 'queued' || doc.status === 'processing'
+  const TRANSIENT_FRESH_MS = 10 * 60 * 1000
+  const isTransientStatus =
+    doc.status === 'queued' || doc.status === 'processing'
+  const updated = (doc.updatedAt ?? doc.createdAt).getTime()
+  const isTransient =
+    isTransientStatus && Date.now() - updated < TRANSIENT_FRESH_MS
   const sortedFields = [...(doc.fields ?? [])].sort(
     (a, b) => a.confidence - b.confidence
   )
