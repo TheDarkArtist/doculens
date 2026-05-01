@@ -1,16 +1,13 @@
-import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getTenantById } from '@/features/tenants/tenant.repository'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { ThresholdEditor } from '@/components/settings/threshold-editor'
 import { UserManagement } from '@/components/settings/user-management'
 import { ApiKeyManagement } from '@/components/settings/api-key-management'
 import { WebhookConfig } from '@/components/settings/webhook-config'
 import { DataRetention } from '@/components/settings/data-retention'
-import { Mail } from 'lucide-react'
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -84,21 +81,6 @@ export default async function SettingsPage() {
           <UserManagement />
           <ApiKeyManagement />
           <WebhookConfig />
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Email Ingestion</CardTitle>
-              <CardDescription>Process documents via email</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href="/settings/email-ingestion">
-                <Button variant="outline" className="w-full">
-                  <Mail className="mr-2 h-4 w-4" />
-                  Configure Email Ingestion
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
