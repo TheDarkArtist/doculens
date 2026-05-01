@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -89,7 +88,7 @@ const DEMO_ACCOUNTS = [
 
 export default async function LandingPage() {
   const session = await auth()
-  if (session?.user) redirect('/dashboard')
+  const signedIn = !!session?.user
 
   return (
     <div className="min-h-screen bg-background">
@@ -103,8 +102,10 @@ export default async function LandingPage() {
             <span className="text-sm text-muted-foreground">AI</span>
           </Link>
           <div className="flex items-center gap-2">
-            <Link href="/login">
-              <Button size="sm">Sign in</Button>
+            <Link href={signedIn ? '/dashboard' : '/login'}>
+              <Button size="sm">
+                {signedIn ? 'Open dashboard' : 'Sign in'}
+              </Button>
             </Link>
           </div>
         </div>
@@ -131,9 +132,9 @@ export default async function LandingPage() {
               with a full audit trail. Built on a serverless durable pipeline, deployed at zero cost.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-3">
-              <Link href="/login">
+              <Link href={signedIn ? '/dashboard' : '/login'}>
                 <Button size="lg" className="gap-2">
-                  Try the demo
+                  {signedIn ? 'Open dashboard' : 'Try the demo'}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
