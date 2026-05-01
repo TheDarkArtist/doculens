@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, or, isNull } from 'drizzle-orm'
 import { db } from '@/db'
 import { extractionTemplates } from '@/db/schema/extraction-templates'
 import { updateDocumentStatus } from '@/features/documents/document.repository'
@@ -13,7 +13,12 @@ export async function classifyDocument(
 ) {
   await publishDocumentStatus(tenantId, documentId, 'classifying', 0.3)
 
-  const templates = await db.query.extractionTemplates.findMany({})
+  const templates = await db.query.extractionTemplates.findMany({
+    where: or(
+      eq(extractionTemplates.tenantId, tenantId),
+      isNull(extractionTemplates.tenantId)
+    ),
+  })
   const templateNames = templates.map((t) => t.slug)
 
   const firstPageText = normalized.pages[0]?.text || ''
