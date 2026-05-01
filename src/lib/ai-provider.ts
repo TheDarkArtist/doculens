@@ -31,6 +31,8 @@ export type AIProvider = {
 
   embed(text: string): Promise<number[]>
   embedBatch(texts: string[]): Promise<number[][]>
+
+  extractTextFromMedia(buffer: Buffer, mimeType: string): Promise<string>
 }
 
 export type GeminiSchema = {
@@ -159,6 +161,20 @@ function createGeminiProvider(): AIProvider {
       })
       return result.embeddings.map((e: { values: number[] }) => e.values)
     },
+
+    async extractTextFromMedia(buffer, mimeType) {
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+      const result = await model.generateContent([
+        {
+          inlineData: {
+            mimeType,
+            data: buffer.toString('base64'),
+          },
+        },
+        'Extract all readable text from this document. Preserve the original structure: line breaks between paragraphs, lists, tables (use tab or pipe separators). Return only the extracted text, no commentary or markdown fencing.',
+      ])
+      return result.response.text()
+    },
   }
 }
 
@@ -243,6 +259,36 @@ function createOpenAIProvider(): AIProvider {
         dimensions: 768,
       })
       return response.data.map((d: { embedding: number[] }) => d.embedding)
+    },
+
+    async extractTextFromMedia(buffer, mimeType) {
+      if (mimeType === 'application/pdf') {
+        // OpenAI vision does not accept PDFs natively. Skip OCR fallback on
+        // OpenAI for scanned PDFs — Gemini is the supported provider for that.
+        return ''
+      }
+
+      const response = await client.chat.completions.create({
+        model: env.OPENAI_MODEL,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Extract all readable text from this image. Preserve structure: line breaks between paragraphs, lists, tables (use tab or pipe separators). Return only the extracted text, no commentary.',
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType};base64,${buffer.toString('base64')}`,
+                },
+              },
+            ],
+          },
+        ],
+      })
+      return response.choices[0].message.content ?? ''
     },
   }
 }

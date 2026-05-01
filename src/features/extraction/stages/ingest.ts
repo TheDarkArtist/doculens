@@ -1,7 +1,10 @@
 import { downloadFile } from '@/lib/storage'
 import { updateDocumentStatus } from '@/features/documents/document.repository'
 import { publishDocumentStatus } from '@/lib/pusher'
+import { getAIProvider } from '@/lib/ai-provider'
 import type { NormalizedDocument } from '../extraction.types'
+
+const MIN_TEXT_LAYER_CHARS = 50
 
 export async function ingestDocument(
   tenantId: string,
@@ -17,13 +20,46 @@ export async function ingestDocument(
   const buffer = await downloadFile(storageKey)
 
   if (mimeType === 'application/pdf') {
-    return extractPdfPages(buffer)
+    const fromTextLayer = await extractPdfPages(buffer)
+    const totalChars = fromTextLayer.pages.reduce(
+      (n, p) => n + (p.text?.length ?? 0),
+      0
+    )
+    if (totalChars >= MIN_TEXT_LAYER_CHARS) return fromTextLayer
+
+    const ocrText = await ocrFallback(buffer, mimeType)
+    if (!ocrText) return fromTextLayer
+
+    return {
+      pages: [{ pageNumber: 1, text: ocrText, hasTextLayer: false }],
+      format: 'pdf',
+      pageCount: fromTextLayer.pageCount,
+    }
+  }
+
+  if (mimeType.startsWith('image/')) {
+    const ocrText = await ocrFallback(buffer, mimeType)
+    return {
+      pages: [{ pageNumber: 1, text: ocrText || null, hasTextLayer: false }],
+      format: 'image',
+      pageCount: 1,
+    }
   }
 
   return {
     pages: [{ pageNumber: 1, text: null, hasTextLayer: false }],
     format: 'image',
     pageCount: 1,
+  }
+}
+
+async function ocrFallback(buffer: Buffer, mimeType: string): Promise<string> {
+  try {
+    const provider = getAIProvider()
+    return await provider.extractTextFromMedia(buffer, mimeType)
+  } catch (e) {
+    console.warn('[ingest] OCR fallback failed:', e)
+    return ''
   }
 }
 
