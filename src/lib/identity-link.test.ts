@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { decideLink } from './identity-link'
+import { decideLink, normalizeEmail } from './identity-link'
 
 const claims = { sub: 's1', email: 'a@x.com', emailVerified: true }
 
@@ -24,4 +24,8 @@ test('rejects unverified email, ambiguous email, and rows linked to another subj
   assert.equal(decideLink(claims, undefined, [free, { ...free, id: 'u3' }]).action, 'reject')
   assert.equal(decideLink(claims, undefined, [{ id: 'u4', identitySubject: 'other' }]).action, 'reject')
   assert.equal(decideLink(claims, undefined, []).action, 'reject')
+})
+
+test('normalizeEmail trims and lowercases', () => {
+  assert.equal(normalizeEmail('  Jane@X.COM '), 'jane@x.com')
 })

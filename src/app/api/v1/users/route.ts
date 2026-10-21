@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { eq } from 'drizzle-orm'
+import { normalizeEmail } from '@/lib/identity-link'
 import { auth } from '@/lib/auth'
 import { db } from '@/db'
 import { users } from '@/db/schema/users'
@@ -35,7 +36,8 @@ export async function POST(req: NextRequest) {
   if (session.user.role !== 'admin') return forbiddenResponse()
 
   const body = await req.json()
-  const { email, name, role } = body
+  const { name, role } = body
+  const email = typeof body.email === 'string' ? normalizeEmail(body.email) : ''
 
   if (!email || !name) {
     return errorResponse('VALIDATION_ERROR', 'Email and name are required')

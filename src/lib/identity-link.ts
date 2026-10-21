@@ -1,3 +1,6 @@
+/** The one canonical form of an email for storage and comparison. */
+export const normalizeEmail = (email: string) => email.trim().toLowerCase()
+
 export interface LinkCandidate {
   id: string
   identitySubject: string | null

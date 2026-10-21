@@ -7,7 +7,9 @@ import { env } from './env'
 
 export const SESSION_COOKIE = 'doculens_session'
 const PURPOSE = 'doculens:session'
-export const SESSION_MAX_AGE_SECONDS = 12 * 60 * 60
+// Short on purpose: the session is stateless, and auth() re-reads the user row on every call,
+// so a deleted user is refused at once and a changed role applies at once. Re-login is a silent identity redirect.
+export const SESSION_MAX_AGE_SECONDS = 60 * 60
 
 const secret = () => {
   if (!env.OIDC_COOKIE_SECRET) throw new Error('OIDC_COOKIE_SECRET is not set')

@@ -5,7 +5,7 @@ import { createAuthRoutes, type AuthRoutes } from '@tdacorp/identity-sdk/rp/next
 import { db } from '@/db'
 import { users } from '@/db/schema/users'
 import { clearSessionCookie, sessionCookie } from './auth'
-import { decideLink } from './identity-link'
+import { decideLink, normalizeEmail } from './identity-link'
 import { env } from './env'
 
 const LOGIN_PATH = '/login'
@@ -46,7 +46,7 @@ async function signIn({ idToken, redirectTo }: LoginSuccess): Promise<Response> 
   const { email, email_verified: emailVerified } = idToken.claims
   const claims = {
     sub: idToken.sub,
-    email: typeof email === 'string' ? email.toLowerCase() : '',
+    email: typeof email === 'string' ? normalizeEmail(email) : '',
     emailVerified: emailVerified === true,
   }
   const bySubject = await db.query.users.findFirst({ where: eq(users.identitySubject, claims.sub) })
