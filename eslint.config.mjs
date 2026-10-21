@@ -1,3 +1,5 @@
 import next from 'eslint-config-next'
 
-export default [...next, { ignores: ['.next/**', 'src/db/migrations/**'] }]
+const config = [...next, { ignores: ['.next/**', 'src/db/migrations/**'] }]
+
+export default config

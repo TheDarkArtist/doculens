@@ -228,7 +228,7 @@ export default async function LandingPage() {
               </div>
             </div>
             <div className="rounded-xl border bg-card p-6 font-mono text-xs">
-              <div className="text-muted-foreground">// pipeline as durable steps</div>
+              <div className="text-muted-foreground">{'// pipeline as durable steps'}</div>
               <pre className="mt-3 overflow-x-auto leading-relaxed text-foreground">
 {`inngest.createFunction(
   { id: 'process-document' },

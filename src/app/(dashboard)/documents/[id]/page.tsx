@@ -25,8 +25,9 @@ export default async function DocumentDetailPage({
   const isTransientStatus =
     doc.status === 'queued' || doc.status === 'processing'
   const updated = (doc.updatedAt ?? doc.createdAt).getTime()
-  const isTransient =
-    isTransientStatus && Date.now() - updated < TRANSIENT_FRESH_MS
+  // eslint-disable-next-line react-hooks/purity -- async server component: runs once per request
+  const ageMs = Date.now() - updated
+  const isTransient = isTransientStatus && ageMs < TRANSIENT_FRESH_MS
 
   return (
     <div className="space-y-6">

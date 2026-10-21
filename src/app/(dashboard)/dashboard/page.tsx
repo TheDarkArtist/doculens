@@ -57,6 +57,7 @@ export default async function DashboardPage() {
   ]
 
   const TRANSIENT_FRESH_MS = 10 * 60 * 1000
+  // eslint-disable-next-line react-hooks/purity -- async server component: runs once per request, not a re-rendering client component
   const now = Date.now()
   const hasTransient = recent.some((d) => {
     if (d.status !== 'queued' && d.status !== 'processing') return false
