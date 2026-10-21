@@ -5,12 +5,9 @@ import { documents } from './schema/documents'
 import { extractedFields } from './schema/extracted-fields'
 import { extractionTemplates } from './schema/extraction-templates'
 import { auditLogs } from './schema/audit-logs'
-import { hashSync } from 'bcryptjs'
 import type { TemplateSchema } from './schema/extraction-templates'
 import { generateDemoDocuments } from './seed-data'
 
-const DEMO_PASSWORD = hashSync('demo1234', 10)
-const KUSHAGRA_PASSWORD = hashSync('kushagra28', 10)
 
 const invoiceSchema: TemplateSchema = {
   fields: [
@@ -110,10 +107,10 @@ async function seed() {
   const [tenant] = await db.insert(tenants).values({ name: 'TDACorp', slug: 'tdacorp' }).returning()
 
   const userRows = await db.insert(users).values([
-    { tenantId: tenant.id, email: 'sparrow.kushagra@gmail.com', name: 'Kushagra Sharma', role: 'admin' as const, passwordHash: KUSHAGRA_PASSWORD },
-    { tenantId: tenant.id, email: 'admin@tdacorp.demo', name: 'Admin User', role: 'admin' as const, passwordHash: DEMO_PASSWORD },
-    { tenantId: tenant.id, email: 'reviewer@tdacorp.demo', name: 'Reviewer User', role: 'reviewer' as const, passwordHash: DEMO_PASSWORD },
-    { tenantId: tenant.id, email: 'viewer@tdacorp.demo', name: 'Viewer User', role: 'viewer' as const, passwordHash: DEMO_PASSWORD },
+    { tenantId: tenant.id, email: 'sparrow.kushagra@gmail.com', name: 'Kushagra Sharma', role: 'admin' as const },
+    { tenantId: tenant.id, email: 'admin@tdacorp.demo', name: 'Admin User', role: 'admin' as const },
+    { tenantId: tenant.id, email: 'reviewer@tdacorp.demo', name: 'Reviewer User', role: 'reviewer' as const },
+    { tenantId: tenant.id, email: 'viewer@tdacorp.demo', name: 'Viewer User', role: 'viewer' as const },
   ]).returning()
 
   const templateRows = await db.insert(extractionTemplates).values([

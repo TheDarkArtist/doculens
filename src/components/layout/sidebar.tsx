@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useSession, signOut } from 'next-auth/react'
 import {
   LayoutDashboard,
   FileText,
@@ -32,9 +31,8 @@ const secondaryNav = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
-export function Sidebar() {
+export function Sidebar({ user }: { user: { name: string; email: string } }) {
   const pathname = usePathname()
-  const { data: session } = useSession()
 
   function isActive(href: string) {
     return pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
@@ -69,26 +67,26 @@ export function Sidebar() {
         </div>
       </nav>
 
-      {session?.user && (
         <div className="border-t p-3">
           <div className="flex items-center gap-3 rounded-lg px-2 py-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-              {session.user.name?.charAt(0).toUpperCase()}
+              {user.name?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{session.user.name}</p>
-              <p className="text-[11px] text-muted-foreground truncate">{session.user.email}</p>
+              <p className="text-sm font-medium truncate">{user.name}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
             </div>
-            <button
-              onClick={() => signOut({ callbackUrl: '/login' })}
-              className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
-              title="Sign out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            <form action="/api/auth/logout" method="post">
+              <button
+                type="submit"
+                className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </form>
           </div>
         </div>
-      )}
     </aside>
   )
 }

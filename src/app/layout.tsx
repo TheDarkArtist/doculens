@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import NextTopLoader from 'nextjs-toploader'
-import { Providers } from '@/components/providers'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -21,7 +20,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <NextTopLoader color="hsl(220, 70%, 50%)" height={2} showSpinner={false} />
-        <Providers>{children}</Providers>
+        {children}
       </body>
     </html>
   )

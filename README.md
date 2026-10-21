@@ -73,3 +73,12 @@ pnpm inngest:dev  # Terminal 2: Inngest dev server
 ## License
 
 Proprietary. TDACorp Private Limited.
+
+## Authentication (TDACorp identity v2)
+
+Login is OIDC against identity (`/api/auth/login`, `/callback`, `/logout`). Env vars: `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_KID`, `OIDC_PRIVATE_JWK`, `OIDC_COOKIE_SECRET` (32+ bytes), `APP_ORIGIN`.
+
+Owner steps:
+1. Register a `web` client on identity with redirect URI `${APP_ORIGIN}/api/auth/callback` and post-logout URI `${APP_ORIGIN}/login`; set the env vars above.
+2. Schema (apply with `pnpm db:push` after review, or run the SQL): `ALTER TABLE users ADD COLUMN identity_subject text UNIQUE; ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;`
+3. Make sure each user's local email matches their verified identity email; the first login links them by that email.

@@ -36,7 +36,6 @@ export function UserManagement() {
       body: JSON.stringify({
         email: form.get('email'),
         name: form.get('name'),
-        password: form.get('password'),
         role: form.get('role'),
       }),
     })
@@ -88,10 +87,6 @@ export function UserManagement() {
               <div className="space-y-1">
                 <Label className="text-xs">Email</Label>
                 <Input name="email" type="email" required placeholder="jane@company.com" className="h-9" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Password</Label>
-                <Input name="password" type="password" required placeholder="Temporary password" className="h-9" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Role</Label>

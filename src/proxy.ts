@@ -1,13 +1,14 @@
-import { auth } from '@/lib/auth'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { SESSION_COOKIE, readSessionUserId } from '@/lib/auth'
 
 const PUBLIC_PATHS = new Set(['/', '/login'])
 
-export const proxy = auth((req) => {
-  if (!req.auth && !PUBLIC_PATHS.has(req.nextUrl.pathname)) {
+export async function proxy(req: NextRequest) {
+  const userId = await readSessionUserId(req.cookies.get(SESSION_COOKIE)?.value)
+  if (!userId && !PUBLIC_PATHS.has(req.nextUrl.pathname)) {
     return NextResponse.redirect(new URL('/login', req.nextUrl.origin))
   }
-})
+}
 
 export const config = {
   matcher: [

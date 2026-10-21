@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
 import { eq } from 'drizzle-orm'
-import { hashSync } from 'bcryptjs'
 import { auth } from '@/lib/auth'
 import { db } from '@/db'
 import { users } from '@/db/schema/users'
@@ -36,10 +35,10 @@ export async function POST(req: NextRequest) {
   if (session.user.role !== 'admin') return forbiddenResponse()
 
   const body = await req.json()
-  const { email, name, role, password } = body
+  const { email, name, role } = body
 
-  if (!email || !name || !password) {
-    return errorResponse('VALIDATION_ERROR', 'Email, name, and password are required')
+  if (!email || !name) {
+    return errorResponse('VALIDATION_ERROR', 'Email and name are required')
   }
 
   const [user] = await db
@@ -49,7 +48,6 @@ export async function POST(req: NextRequest) {
       email,
       name,
       role: role ?? 'viewer',
-      passwordHash: hashSync(password, 10),
     })
     .returning({
       id: users.id,

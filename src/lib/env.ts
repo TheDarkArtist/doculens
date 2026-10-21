@@ -21,8 +21,13 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
 
-  AUTH_SECRET: z.string().min(1),
-  AUTH_URL: z.string().url().optional(),
+  // TDACorp identity OIDC client; checked when a login starts, so a build needs none of it
+  OIDC_ISSUER: z.string().url().optional(),
+  OIDC_CLIENT_ID: z.string().optional(),
+  OIDC_KID: z.string().optional(),
+  OIDC_PRIVATE_JWK: z.string().optional(),
+  OIDC_COOKIE_SECRET: z.string().min(32).optional(),
+  APP_ORIGIN: z.string().url().optional(),
 
   PUSHER_APP_ID: z.string().optional(),
   PUSHER_KEY: z.string().optional(),

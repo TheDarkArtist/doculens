@@ -18,7 +18,10 @@ export const users = pgTable(
     email: text('email').notNull(),
     name: text('name').notNull(),
     role: userRoleEnum('role').notNull().default('viewer'),
-    passwordHash: text('password_hash').notNull(),
+    // Legacy Auth.js credential, no longer read or written; login is via identity
+    passwordHash: text('password_hash'),
+    // identity ID token sub, set on first verified login
+    identitySubject: text('identity_subject').unique(),
     emailVerified: timestamp('email_verified', { withTimezone: true }),
     image: text('image'),
     createdAt: timestamp('created_at', { withTimezone: true })
