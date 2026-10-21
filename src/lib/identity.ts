@@ -30,6 +30,7 @@ export function authRoutes(): AuthRoutes {
   return createAuthRoutes({
     rp,
     appOrigin: origin,
+    secureCookies: origin.startsWith('https:'),
     cookieSecret: required(env.OIDC_COOKIE_SECRET, 'OIDC_COOKIE_SECRET'),
     defaultReturnTo: '/dashboard',
     onLogin: signIn,

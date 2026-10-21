@@ -16,17 +16,20 @@ const secret = () => {
   return env.OIDC_COOKIE_SECRET
 }
 
+// Secure only over https; an http loopback origin (local dev against a local identity) cannot carry it everywhere.
+const secureAttr = () => (env.APP_ORIGIN?.startsWith('https:') === false ? '' : '; Secure')
+
 /** Set-Cookie value for a session that carries only the local user id. */
 export async function sessionCookie(userId: string): Promise<string> {
   const value = await seal(
     { uid: userId },
     { secret: secret(), ttlSeconds: SESSION_MAX_AGE_SECONDS, purpose: PURPOSE }
   )
-  return `${SESSION_COOKIE}=${value}; Path=/; Max-Age=${SESSION_MAX_AGE_SECONDS}; HttpOnly; Secure; SameSite=Lax`
+  return `${SESSION_COOKIE}=${value}; Path=/; Max-Age=${SESSION_MAX_AGE_SECONDS}; HttpOnly${secureAttr()}; SameSite=Lax`
 }
 
 export const clearSessionCookie = () =>
-  `${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`
+  `${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly${secureAttr()}; SameSite=Lax`
 
 /** The local user id in a session cookie value, or null when absent, forged or expired. */
 export async function readSessionUserId(value: string | undefined): Promise<string | null> {
