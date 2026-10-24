@@ -45,14 +45,14 @@ export async function createDocument(
       },
     })
 
-    inngest
-      .send({
+    try {
+      await inngest.send({
         name: 'document/uploaded',
         data: { documentId: doc.id, tenantId },
       })
-      .catch((e) => {
-        console.warn('[inngest] Failed to send event (is inngest dev running?):', e)
-      })
+    } catch (e) {
+      console.error('[inngest] Failed to send event:', e)
+    }
 
     return ok(doc)
   } catch (e) {
