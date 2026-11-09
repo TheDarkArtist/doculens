@@ -6,6 +6,7 @@ import { db } from '@/db'
 import { users } from '@/db/schema/users'
 import { clearSessionCookie, sessionCookie } from './auth'
 import { decideLink, normalizeEmail } from './identity-link'
+import { signedOutCookie } from './login-path'
 import { env } from './env'
 
 const LOGIN_PATH = '/login'
@@ -37,8 +38,8 @@ export function authRoutes(): AuthRoutes {
     // Every failure collapses to one redirect so the callback is never an oracle for provider text.
     onError: () => NextResponse.redirect(new URL(`${LOGIN_PATH}?error=1`, origin), 303),
     logout: {
-      postLogoutRedirectUri: `${origin}${LOGIN_PATH}?signedout=1`,
-      clearSessionCookies: () => [clearSessionCookie()],
+      postLogoutRedirectUri: `${origin}${LOGIN_PATH}`,
+      clearSessionCookies: () => [clearSessionCookie(), signedOutCookie(origin.startsWith('https:'))],
     },
   })
 }

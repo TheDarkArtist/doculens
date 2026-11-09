@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import {
   Card,
   CardHeader,
@@ -7,16 +8,17 @@ import {
   CardContent,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { loginPath } from '@/lib/login-path'
+import { SIGNED_OUT_COOKIE, loginPath } from '@/lib/login-path'
 
 // Only a failed sign-in or a sign-out stays here. Anything else goes straight to identity, so a signed-in user never sees a card.
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; signedout?: string; returnTo?: string }>
+  searchParams: Promise<{ error?: string; returnTo?: string }>
 }) {
-  const { error, signedout, returnTo } = await searchParams
-  if (!error && !signedout) redirect(loginPath(returnTo))
+  const { error, returnTo } = await searchParams
+  const signedOut = !error && (await cookies()).has(SIGNED_OUT_COOKIE)
+  if (!error && !signedOut) redirect(loginPath(returnTo))
 
   return (
     <div className="animate-fade">
