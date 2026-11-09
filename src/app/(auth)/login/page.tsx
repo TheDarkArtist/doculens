@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import {
   Card,
   CardHeader,
@@ -6,13 +7,16 @@ import {
   CardContent,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { loginPath } from '@/lib/login-path'
 
+// Only a failed sign-in or a sign-out stays here. Anything else goes straight to identity, so a signed-in user never sees a card.
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; signedout?: string; returnTo?: string }>
 }) {
-  const { error } = await searchParams
+  const { error, signedout, returnTo } = await searchParams
+  if (!error && !signedout) redirect(loginPath(returnTo))
 
   return (
     <div className="animate-fade">
@@ -28,8 +32,8 @@ export default async function LoginPage({
 
       <Card className="shadow-lg">
         <CardHeader className="text-center pb-4">
-          <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>Sign in with your TDACorp identity to continue</CardDescription>
+          <CardTitle className="text-xl">{error ? 'Sign-in failed' : 'Signed out'}</CardTitle>
+          <CardDescription>{error ? 'Try again with your TDACorp identity.' : 'You have signed out of DocuLens.'}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {error && (
@@ -38,7 +42,7 @@ export default async function LoginPage({
             </div>
           )}
           <Button asChild className="w-full h-11">
-            <a href="/api/auth/login">Sign in with TDACorp</a>
+            <a href={loginPath()}>{error ? 'Try again' : 'Sign in with TDACorp'}</a>
           </Button>
         </CardContent>
       </Card>

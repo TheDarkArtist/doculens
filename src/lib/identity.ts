@@ -37,7 +37,7 @@ export function authRoutes(): AuthRoutes {
     // Every failure collapses to one redirect so the callback is never an oracle for provider text.
     onError: () => NextResponse.redirect(new URL(`${LOGIN_PATH}?error=1`, origin), 303),
     logout: {
-      postLogoutRedirectUri: `${origin}${LOGIN_PATH}`,
+      postLogoutRedirectUri: `${origin}${LOGIN_PATH}?signedout=1`,
       clearSessionCookies: () => [clearSessionCookie()],
     },
   })
