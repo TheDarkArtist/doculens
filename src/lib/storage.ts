@@ -26,9 +26,15 @@ export async function getPresignedUploadUrl(
   contentType: string
 ) {
   if (isSupabase) {
-    // Supabase: return an upload URL that the client POSTs to
-    const url = `${env.SUPABASE_URL}/storage/v1/object/${env.S3_BUCKET}/${key}`
-    return { url, key, expiresIn: 900, headers: { Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` } }
+    // Supabase: a signed upload URL made with the service key here; the client PUTs to it and never sees a secret.
+    const res = await fetch(`${env.SUPABASE_URL}/storage/v1/object/upload/sign/${env.S3_BUCKET}/${key}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` },
+    })
+    if (!res.ok) throw new Error(`Supabase signed upload URL failed: ${res.status}`)
+    const { url } = (await res.json()) as { url: string }
+    // Supabase fixes the lifetime of a signed upload URL at two hours.
+    return { url: `${env.SUPABASE_URL}/storage/v1${url}`, key, expiresIn: 7200 }
   }
 
   const command = new PutObjectCommand({

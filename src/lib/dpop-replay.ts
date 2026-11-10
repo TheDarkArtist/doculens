@@ -1,10 +1,11 @@
 import type { DpopReplayStore } from '@tdacorp/identity-sdk'
-import { lt } from 'drizzle-orm'
+import { inArray, lt } from 'drizzle-orm'
 import { db } from '@/db'
 import { dpopJti } from '@/db/schema/dpop-jti'
 
 // A proof is refused after a couple of minutes anyway; never keep a row longer than this whatever the caller asks.
 const MAX_TTL_MS = 10 * 60 * 1000
+const CLEANUP_BATCH = 100
 
 // Atomic claim in Postgres, shared by every instance. A throw is a refusal to the caller (fails closed).
 export const dpopReplayStore: DpopReplayStore = {
@@ -16,7 +17,11 @@ export const dpopReplayStore: DpopReplayStore = {
       .values({ jti, expiresAt: expires })
       .onConflictDoUpdate({ target: dpopJti.jti, set: { expiresAt: expires }, setWhere: lt(dpopJti.expiresAt, now) })
       .returning({ jti: dpopJti.jti })
-    await db.delete(dpopJti).where(lt(dpopJti.expiresAt, now))
+    // Housekeeping only: bounded, and its failure must not refuse a proof that was already claimed.
+    await db
+      .delete(dpopJti)
+      .where(inArray(dpopJti.jti, db.select({ jti: dpopJti.jti }).from(dpopJti).where(lt(dpopJti.expiresAt, now)).limit(CLEANUP_BATCH)))
+      .catch((error) => console.error('[dpop-replay] cleanup failed:', error))
     return claimed.length === 1
   },
 }

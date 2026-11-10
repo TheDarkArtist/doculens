@@ -45,6 +45,8 @@ export async function authenticateMachineToken(request: Request, server: Resourc
     if (error instanceof ResourceServerError) return null
     throw error
   }
+  // A human's token would outlive session revocation (back-channel logout); only non-human principals use this path.
+  if (!verified.kind || verified.kind === 'human') return null
   const codes = grantedCodes(verified.claims)
   const tenant = verified.tenantId && (await db.query.tenants.findFirst({ where: eq(tenants.identityTenantId, verified.tenantId) }))
   if (!tenant || codes.length === 0) return null

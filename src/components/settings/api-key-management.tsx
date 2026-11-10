@@ -17,7 +17,7 @@ type ApiKey = {
   key?: string
 }
 
-export function ApiKeyManagement() {
+export function ApiKeyManagement({ canCreate }: { canCreate: boolean }) {
   const [keys, setKeys] = useState<ApiKey[]>([])
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -69,10 +69,12 @@ export function ApiKeyManagement() {
           <CardTitle className="text-lg">API Keys</CardTitle>
           <CardDescription>Programmatic access to the DocuLens API</CardDescription>
         </div>
-        <Button size="sm" variant="outline" onClick={() => setShowForm(!showForm)}>
-          <Key className="mr-2 h-4 w-4" />
-          Create Key
-        </Button>
+        {canCreate && (
+          <Button size="sm" variant="outline" onClick={() => setShowForm(!showForm)}>
+            <Key className="mr-2 h-4 w-4" />
+            Create Key
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         {newKey && (

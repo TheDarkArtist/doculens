@@ -10,6 +10,7 @@ import {
 import {
   createDocumentSchema,
   listDocumentsSchema,
+  ownsStorageKey,
 } from '@/features/documents/document.types'
 import * as documentService from '@/features/documents/document.service'
 
@@ -22,6 +23,9 @@ export async function POST(req: NextRequest) {
   const parsed = createDocumentSchema.safeParse(body)
   if (!parsed.success) {
     return errorResponse('VALIDATION_ERROR', parsed.error.message)
+  }
+  if (!ownsStorageKey(authResult.tenantId, parsed.data.storageKey)) {
+    return errorResponse('VALIDATION_ERROR', 'storageKey does not belong to this tenant')
   }
 
   const result = await documentService.createDocument(

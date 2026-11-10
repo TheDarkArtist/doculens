@@ -1,4 +1,5 @@
 import { auth } from '@/lib/auth'
+import { env } from '@/lib/env'
 import { redirect } from 'next/navigation'
 import { getTenantById } from '@/features/tenants/tenant.repository'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
@@ -77,7 +78,7 @@ export default async function SettingsPage() {
         </div>
 
         <div className="space-y-6">
-          <ApiKeyManagement />
+          <ApiKeyManagement canCreate={env.DOCULENS_MACHINE_IDENTITY_TOKENS !== 'identity'} />
           <WebhookConfig />
         </div>
       </div>

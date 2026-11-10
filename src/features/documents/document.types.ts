@@ -12,6 +12,10 @@ export const createDocumentSchema = z.object({
   templateId: z.string().uuid().optional(),
 })
 
+/** The upload-url route issues keys as `<tenantId>/<documentId>/<filename>`; a caller may only ingest its own tenant's. */
+export const ownsStorageKey = (tenantId: string, key: string) =>
+  key.startsWith(`${tenantId}/`) && !key.split('/').includes('..')
+
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>
 
 export const uploadUrlSchema = z.object({
