@@ -1,9 +1,13 @@
 import { compare } from 'bcryptjs'
 import { eq, isNull, or } from 'drizzle-orm'
+import { createResourceServer, ResourceServerError, type ResourceServer } from '@tdacorp/identity-sdk'
 import { db } from '@/db'
 import { apiKeys } from '@/db/schema/api-keys'
+import { tenants } from '@/db/schema/tenants'
 import { auth, type Actor } from './auth'
-import { CODES } from './authz-claim'
+import { CODES, grantedCodes } from './authz-claim'
+import { dpopReplayStore } from './dpop-replay'
+import { env } from './env'
 
 type AuthResult = {
   actor: Actor
@@ -17,13 +21,49 @@ export const keyPrefix = (rawKey: string) => rawKey.slice(0, 11)
 // Key scopes map onto the same codes the session path checks; a key never holds doculens.admin.
 const SCOPE_FOR_CODE: Record<string, string> = { [CODES.read]: 'documents:read', [CODES.review]: 'documents:write' }
 
+// Built on first use so `off` never touches identity config or its JWKS, and a build needs no OIDC env.
+let machineServer: ResourceServer | undefined
+function resourceServer(): ResourceServer {
+  const { OIDC_ISSUER: issuer, OIDC_CLIENT_ID: audience, APP_ORIGIN: publicOrigin } = env
+  if (!issuer || !audience || !publicOrigin) throw new Error('OIDC_ISSUER, OIDC_CLIENT_ID and APP_ORIGIN are required for identity machine tokens')
+  return (machineServer ??= createResourceServer({
+    issuer: issuer.replace(/\/+$/, ''),
+    audience,
+    publicOrigin: publicOrigin.replace(/\/+$/, ''),
+    replay: dpopReplayStore,
+    requireConfirmation: true,
+    refuseActorTokens: true,
+  }))
+}
+
+// Machine credential from identity (D9): a DPoP-bound token exchanged to this client. Any refusal is null (401).
+export async function authenticateMachineToken(request: Request, server: ResourceServer = resourceServer()): Promise<AuthResult | null> {
+  let verified
+  try {
+    verified = await server.verifyRequest(request)
+  } catch (error) {
+    if (error instanceof ResourceServerError) return null
+    throw error
+  }
+  const codes = grantedCodes(verified.claims)
+  const tenant = verified.tenantId && (await db.query.tenants.findFirst({ where: eq(tenants.identityTenantId, verified.tenantId) }))
+  if (!tenant || codes.length === 0) return null
+  return { actor: { id: verified.subject, name: verified.subject }, tenantId: tenant.id, can: (code) => codes.includes(code) }
+}
+
 export async function authenticateRequest(
   request: Request
 ): Promise<AuthResult | null> {
+  const mode = env.DOCULENS_MACHINE_IDENTITY_TOKENS
+
   // Try API key first
   const apiKey = request.headers.get('x-api-key')
   if (apiKey) {
-    return authenticateApiKey(apiKey)
+    return mode === 'identity' ? null : authenticateApiKey(apiKey)
+  }
+
+  if (mode !== 'off' && /^(DPoP|Bearer) /i.test(request.headers.get('authorization') ?? '')) {
+    return authenticateMachineToken(request)
   }
 
   // Fall back to session

@@ -164,6 +164,9 @@ importers:
       eslint-config-next:
         specifier: ^16.4.2
         version: 16.4.2(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+      jose:
+        specifier: 6.2.13
+        version: 6.2.13
       pdf-lib:
         specifier: ^1.17.0
         version: 1.17.1

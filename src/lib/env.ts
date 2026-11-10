@@ -28,6 +28,8 @@ const envSchema = z.object({
   OIDC_PRIVATE_JWK: z.string().optional(),
   OIDC_COOKIE_SECRET: z.string().min(32).optional(),
   APP_ORIGIN: z.string().url().optional(),
+  // D9: how machine callers authenticate. off = dl_ keys only, dual = keys and identity tokens, identity = identity tokens only. Anything else fails startup.
+  DOCULENS_MACHINE_IDENTITY_TOKENS: z.enum(['off', 'dual', 'identity']).default('off'),
 
   PUSHER_APP_ID: z.string().optional(),
   PUSHER_KEY: z.string().optional(),

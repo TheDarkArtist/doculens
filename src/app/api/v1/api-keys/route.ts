@@ -5,6 +5,7 @@ import { v4 as uuid } from 'uuid'
 import { keyPrefix } from '@/lib/api-auth'
 import { auth } from '@/lib/auth'
 import { CODES } from '@/lib/authz-claim'
+import { env } from '@/lib/env'
 import { db } from '@/db'
 import { apiKeys } from '@/db/schema/api-keys'
 import {
@@ -39,6 +40,9 @@ export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session?.user) return unauthorizedResponse()
   if (!session.can(CODES.admin)) return forbiddenResponse()
+  if (env.DOCULENS_MACHINE_IDENTITY_TOKENS === 'identity') {
+    return errorResponse('KEYS_DISABLED', 'API keys are retired; use an identity service account', 403)
+  }
 
   const body = await req.json()
   const { name, scopes } = body
