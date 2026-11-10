@@ -22,7 +22,7 @@ export async function GET() {
       .from(extractedFields)
       .innerJoin(documents, eq(extractedFields.documentId, documents.id))
       .where(
-        and(where, isNotNull(extractedFields.reviewedBy))
+        and(where, isNotNull(extractedFields.reviewedBySub))
       ),
     db
       .select({ value: avg(extractedFields.confidence).mapWith(Number) })

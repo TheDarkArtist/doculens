@@ -1,0 +1,16 @@
+{
+  "ns": "doculens",
+  "version": 1,
+  "permissions": [
+    { "code": "doculens.document.read", "action": "read", "resource_type": null, "risk": "low", "on_indeterminate": "deny" },
+    { "code": "doculens.document.review", "action": "review", "resource_type": null, "risk": "medium", "on_indeterminate": "deny" },
+    { "code": "doculens.admin", "action": "administer", "resource_type": null, "risk": "high", "on_indeterminate": "deny" }
+  ],
+  "roles": [
+    { "name": "viewer", "permissions": ["doculens.document.read"] },
+    { "name": "reviewer", "permissions": ["doculens.document.read", "doculens.document.review"] },
+    { "name": "admin", "permissions": ["doculens.document.read", "doculens.document.review", "doculens.admin"] }
+  ],
+  "resource_types": [],
+  "auto_install": false
+}

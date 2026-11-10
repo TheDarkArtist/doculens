@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth'
+import { CODES } from '@/lib/authz-claim'
 import {
   successResponse,
   errorResponse,
@@ -15,7 +16,7 @@ export async function POST(
 ) {
   const session = await auth()
   if (!session?.user) return unauthorizedResponse()
-  if (session.user.role === 'viewer') return forbiddenResponse()
+  if (!session.can(CODES.review)) return forbiddenResponse()
 
   const { id } = await params
   const body = await req.json()
@@ -26,7 +27,7 @@ export async function POST(
 
   const result = await rejectDocument(
     session.user.tenantId,
-    session.user.id,
+    session.user,
     id,
     parsed.data.reason
   )

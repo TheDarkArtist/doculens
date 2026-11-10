@@ -17,7 +17,10 @@ export const auditLogs = pgTable(
     tenantId: uuid('tenant_id')
       .notNull()
       .references(() => tenants.id),
+    // Legacy FK, contract migration drops it.
     userId: uuid('user_id').references(() => users.id),
+    userSub: text('user_sub'),
+    userName: text('user_name'),
     documentId: uuid('document_id').references(() => documents.id),
     action: text('action').notNull(),
     details: jsonb('details')

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { randomBytes } from 'crypto'
 import { auth } from '@/lib/auth'
+import { CODES } from '@/lib/authz-claim'
 import { db } from '@/db'
 import { webhooks } from '@/db/schema/webhooks'
 import {
@@ -26,7 +27,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session?.user) return unauthorizedResponse()
-  if (session.user.role !== 'admin') return forbiddenResponse()
+  if (!session.can(CODES.admin)) return forbiddenResponse()
 
   const body = await req.json()
   const { url, events } = body

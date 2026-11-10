@@ -1,18 +1,20 @@
 import { and, eq, desc, count, isNull } from 'drizzle-orm'
 import { db } from '@/db'
 import { documents } from '@/db/schema/documents'
+import type { Actor } from '@/lib/auth'
 import type { CreateDocumentInput, ListDocumentsInput } from './document.types'
 
 export async function createDocument(
   tenantId: string,
-  uploadedBy: string,
+  uploadedBy: Actor,
   input: CreateDocumentInput
 ) {
   const [doc] = await db
     .insert(documents)
     .values({
       tenantId,
-      uploadedBy,
+      uploadedBySub: uploadedBy.id,
+      uploadedByName: uploadedBy.name,
       filename: input.filename,
       mimeType: input.mimeType,
       fileSize: input.fileSize,

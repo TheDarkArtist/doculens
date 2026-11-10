@@ -1,0 +1,27 @@
+{
+  "iss": "https://identity.tdacorp.test",
+  "sub": "0190a1b2-0000-7000-8000-00000000a001",
+  "aud": "https://hyle.tdacorp.test",
+  "client_id": "tdaid_c_hyle_web",
+  "azp": "tdaid_c_hyle_web",
+  "jti": "Zm9vYmFyYmF6cXV4",
+  "iat": 1790000000,
+  "nbf": 1790000000,
+  "exp": 1790000300,
+  "scope": "openid profile",
+  "ver": 2,
+  "tid": "0190a1b2-0000-7000-8000-00000000b001",
+  "tslug": "acme",
+  "av": 7,
+  "pv": 12,
+  "pvt": 3,
+  "kind": "human",
+  "authz": {
+    "v": 12,
+    "res": {
+      "hyle:workspace:0190a1b2-0000-7000-8000-00000000c001": ["hyle.document.read", "hyle.document.write", "hyle.document.publish", "hyle.members.manage"],
+      "hyle:workspace:0190a1b2-0000-7000-8000-00000000c002": ["hyle.document.read"]
+    },
+    "tenant": ["hyle.workspace.create"]
+  }
+}

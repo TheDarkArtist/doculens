@@ -30,9 +30,10 @@ export const documents = pgTable(
     templateId: uuid('template_id').references(
       () => extractionTemplates.id
     ),
-    uploadedBy: uuid('uploaded_by')
-      .notNull()
-      .references(() => users.id),
+    // Legacy FK, contract migration drops it; new rows carry the identity sub and a name snapshot.
+    uploadedBy: uuid('uploaded_by').references(() => users.id),
+    uploadedBySub: text('uploaded_by_sub').notNull(),
+    uploadedByName: text('uploaded_by_name').notNull(),
     filename: text('filename').notNull(),
     mimeType: text('mime_type').notNull(),
     fileSize: integer('file_size').notNull(),

@@ -2,14 +2,34 @@ import { cookies } from 'next/headers'
 import { eq } from 'drizzle-orm'
 import { seal, unseal } from '@tdacorp/identity-sdk/sealed'
 import { db } from '@/db'
-import { users } from '@/db/schema/users'
+import { tenants } from '@/db/schema/tenants'
+import { CODES, sessionCan } from './authz-claim'
+import { isSessionRevoked } from './revoked-session'
 import { env } from './env'
 
 export const SESSION_COOKIE = 'doculens_session'
 const PURPOSE = 'doculens:session'
-// Short on purpose: the session is stateless, and auth() re-reads the user row on every call,
-// so a deleted user is refused at once and a changed role applies at once. Re-login is a silent identity redirect.
-export const SESSION_MAX_AGE_SECONDS = 60 * 60
+// ADR 0001 (O2): matches the identity access token lifetime. The session never outlives the token's exp;
+// when it ends, re-login is a silent identity redirect.
+export const SESSION_MAX_AGE_SECONDS = 5 * 60
+
+/** What a verified access token gives the session: who, the tenant it was minted for, and doculens's codes in it. */
+export interface SessionIdentity {
+  sub: string
+  name: string
+  email: string
+  tid: string
+  codes: string[]
+  sid: string | null
+  /** Epoch seconds. */
+  tokenExpiresAt: number
+}
+
+/** The actor recorded on audit rows: an identity sub plus the name at the time (a snapshot, never updated). */
+export interface Actor {
+  id: string
+  name: string
+}
 
 const secret = () => {
   if (!env.OIDC_COOKIE_SECRET) throw new Error('OIDC_COOKIE_SECRET is not set')
@@ -19,38 +39,43 @@ const secret = () => {
 // Secure only over https; an http loopback origin (local dev against a local identity) cannot carry it everywhere.
 const secureAttr = () => (env.APP_ORIGIN?.startsWith('https:') === false ? '' : '; Secure')
 
-/** Set-Cookie value for a session that carries only the local user id. */
-export async function sessionCookie(userId: string): Promise<string> {
-  const value = await seal(
-    { uid: userId },
-    { secret: secret(), ttlSeconds: SESSION_MAX_AGE_SECONDS, purpose: PURPOSE }
-  )
-  return `${SESSION_COOKIE}=${value}; Path=/; Max-Age=${SESSION_MAX_AGE_SECONDS}; HttpOnly${secureAttr()}; SameSite=Lax`
+/** Set-Cookie value for a session, or null when the token has no time left (fail closed: no session). */
+export async function sessionCookie(identity: SessionIdentity): Promise<string | null> {
+  const ttl = Math.min(SESSION_MAX_AGE_SECONDS, identity.tokenExpiresAt - Math.floor(Date.now() / 1000))
+  if (ttl < 1) return null
+  const { tokenExpiresAt: _exp, ...payload } = identity
+  const value = await seal(payload, { secret: secret(), ttlSeconds: ttl, purpose: PURPOSE })
+  return `${SESSION_COOKIE}=${value}; Path=/; Max-Age=${ttl}; HttpOnly${secureAttr()}; SameSite=Lax`
 }
 
 export const clearSessionCookie = () =>
   `${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly${secureAttr()}; SameSite=Lax`
 
-/** The local user id in a session cookie value, or null when absent, forged or expired. */
-export async function readSessionUserId(value: string | undefined): Promise<string | null> {
+type StoredSession = Omit<SessionIdentity, 'tokenExpiresAt'>
+
+/** The session in a cookie value, or null when absent, forged, expired or malformed. */
+export async function readSession(value: string | undefined): Promise<StoredSession | null> {
   if (!value) return null
-  const payload = await unseal<{ uid?: string }>(value, { secret: secret(), purpose: PURPOSE })
-  return payload?.uid ?? null
+  const p = await unseal<Partial<StoredSession>>(value, { secret: secret(), purpose: PURPOSE })
+  if (!p?.sub || !p.tid || !Array.isArray(p.codes) || !p.codes.every((c) => typeof c === 'string')) return null
+  return { sub: p.sub, name: p.name ?? '', email: p.email ?? '', tid: p.tid, codes: p.codes, sid: p.sid ?? null }
 }
 
-/** Same shape the Auth.js session had; role and tenant are read fresh from the DB on every call. */
+/**
+ * The signed-in session, or null. Authorization is the stored token claim, checked against the tenant row whose
+ * `identity_tenant_id` equals the token's `tid`; a session with no such tenant, no read code, or an ended identity session is nobody.
+ */
 export async function auth() {
-  const userId = await readSessionUserId((await cookies()).get(SESSION_COOKIE)?.value)
-  if (!userId) return null
-  const user = await db.query.users.findFirst({ where: eq(users.id, userId) })
-  if (!user) return null
+  const session = await readSession((await cookies()).get(SESSION_COOKIE)?.value)
+  if (!session) return null
+  const [tenant, revoked] = await Promise.all([
+    db.query.tenants.findFirst({ where: eq(tenants.identityTenantId, session.tid) }),
+    session.sid ? isSessionRevoked(session.sid) : false,
+  ])
+  const can = (code: string) => sessionCan(session, code, tenant?.identityTenantId ?? null)
+  if (!tenant || revoked || !can(CODES.read)) return null
   return {
-    user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      tenantId: user.tenantId,
-      role: user.role,
-    },
+    can,
+    user: { id: session.sub, email: session.email, name: session.name, tenantId: tenant.id },
   }
 }

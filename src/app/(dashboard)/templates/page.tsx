@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
+import { CODES } from '@/lib/authz-claim'
 import { redirect } from 'next/navigation'
 import { listTemplates } from '@/features/templates/template.repository'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
@@ -22,7 +23,7 @@ export default async function TemplatesPage() {
             Schema-driven extraction for any document type
           </p>
         </div>
-        {session.user.role === 'admin' && (
+        {session.can(CODES.admin) && (
           <Link href="/templates/new">
             <Button>
               <Plus className="mr-2 h-4 w-4" />

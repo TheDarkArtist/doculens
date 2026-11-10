@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   const result = await documentService.createDocument(
     authResult.tenantId,
-    authResult.userId,
+    authResult.actor,
     parsed.data
   )
 

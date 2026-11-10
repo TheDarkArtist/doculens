@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth'
+import { CODES } from '@/lib/authz-claim'
 import {
   successResponse,
   errorResponse,
@@ -22,7 +23,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session?.user) return unauthorizedResponse()
-  if (session.user.role !== 'admin') return forbiddenResponse()
+  if (!session.can(CODES.admin)) return forbiddenResponse()
 
   const body = await req.json()
   const parsed = createTemplateSchema.safeParse(body)

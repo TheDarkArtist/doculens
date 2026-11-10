@@ -1,6 +1,5 @@
 import { db } from './index'
 import { tenants } from './schema/tenants'
-import { users } from './schema/users'
 import { documents } from './schema/documents'
 import { extractedFields } from './schema/extracted-fields'
 import { extractionTemplates } from './schema/extraction-templates'
@@ -104,14 +103,7 @@ const bankStatementSchema: TemplateSchema = {
 async function seed() {
   console.log('Seeding database...')
 
-  const [tenant] = await db.insert(tenants).values({ name: 'TDACorp', slug: 'tdacorp' }).returning()
-
-  const userRows = await db.insert(users).values([
-    { tenantId: tenant.id, email: 'sparrow.kushagra@gmail.com', name: 'Kushagra Sharma', role: 'admin' as const },
-    { tenantId: tenant.id, email: 'admin@tdacorp.demo', name: 'Admin User', role: 'admin' as const },
-    { tenantId: tenant.id, email: 'reviewer@tdacorp.demo', name: 'Reviewer User', role: 'reviewer' as const },
-    { tenantId: tenant.id, email: 'viewer@tdacorp.demo', name: 'Viewer User', role: 'viewer' as const },
-  ]).returning()
+  const [tenant] = await db.insert(tenants).values({ name: 'TDACorp', slug: 'tdacorp', identityTenantId: process.env.SEED_IDENTITY_TENANT_ID }).returning()
 
   const templateRows = await db.insert(extractionTemplates).values([
     { name: 'Invoice', slug: 'invoice', description: 'Standard business invoice', schema: invoiceSchema, isSystem: true },
@@ -122,7 +114,7 @@ async function seed() {
   ]).returning()
 
   const templateMap = Object.fromEntries(templateRows.map((t) => [t.slug, t.id]))
-  const adminUser = userRows[0]
+  const seedActor = { sub: 'seed:doculens', name: 'Seed' }
   const demoDocs = generateDemoDocuments()
 
   for (const doc of demoDocs) {
@@ -130,7 +122,8 @@ async function seed() {
     const [docRow] = await db.insert(documents).values({
       tenantId: tenant.id,
       templateId: templateMap[doc.templateSlug],
-      uploadedBy: adminUser.id,
+      uploadedBySub: seedActor.sub,
+      uploadedByName: seedActor.name,
       filename: doc.filename,
       mimeType: doc.mimeType,
       fileSize: doc.fileSize,
@@ -158,7 +151,7 @@ async function seed() {
     }
 
     await db.insert(auditLogs).values({
-      tenantId: tenant.id, userId: adminUser.id, documentId: docRow.id,
+      tenantId: tenant.id, userSub: seedActor.sub, userName: seedActor.name, documentId: docRow.id,
       action: 'document.uploaded', details: { filename: doc.filename }, createdAt: doc.createdAt,
     })
 
@@ -171,7 +164,7 @@ async function seed() {
     }
   }
 
-  console.log(`Seeded: ${userRows.length} users, ${templateRows.length} templates, ${demoDocs.length} documents`)
+  console.log(`Seeded: ${templateRows.length} templates, ${demoDocs.length} documents`)
   process.exit(0)
 }
 

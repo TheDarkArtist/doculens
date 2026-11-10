@@ -25,7 +25,7 @@ export async function listAuditLogs(
       orderBy: [desc(auditLogs.createdAt)],
       limit,
       offset: skip,
-      with: { user: true, document: true },
+      with: { document: true },
     }),
     db.select({ total: count() }).from(auditLogs).where(where),
   ])

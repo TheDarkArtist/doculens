@@ -4,7 +4,6 @@ import { getTenantById } from '@/features/tenants/tenant.repository'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ThresholdEditor } from '@/components/settings/threshold-editor'
-import { UserManagement } from '@/components/settings/user-management'
 import { ApiKeyManagement } from '@/components/settings/api-key-management'
 import { WebhookConfig } from '@/components/settings/webhook-config'
 import { DataRetention } from '@/components/settings/data-retention'
@@ -78,7 +77,6 @@ export default async function SettingsPage() {
         </div>
 
         <div className="space-y-6">
-          <UserManagement />
           <ApiKeyManagement />
           <WebhookConfig />
         </div>

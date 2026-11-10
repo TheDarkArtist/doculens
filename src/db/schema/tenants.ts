@@ -4,6 +4,8 @@ export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
+  // The identity tenant (token `tid`) this tenant is; a session acts here only when its tid equals this.
+  identityTenantId: uuid('identity_tenant_id').unique(),
   settings: jsonb('settings')
     .notNull()
     .$type<{

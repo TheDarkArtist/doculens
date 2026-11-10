@@ -31,7 +31,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.tenantId],
     references: [tenants.id],
   }),
-  documents: many(documents),
   accounts: many(accounts),
   sessions: many(sessions),
 }))
@@ -47,10 +46,6 @@ export const documentsRelations = relations(
       fields: [documents.templateId],
       references: [extractionTemplates.id],
     }),
-    uploadedByUser: one(users, {
-      fields: [documents.uploadedBy],
-      references: [users.id],
-    }),
     fields: many(extractedFields),
     embeddings: many(documentEmbeddings),
   })
@@ -62,10 +57,6 @@ export const extractedFieldsRelations = relations(
     document: one(documents, {
       fields: [extractedFields.documentId],
       references: [documents.id],
-    }),
-    reviewer: one(users, {
-      fields: [extractedFields.reviewedBy],
-      references: [users.id],
     }),
   })
 )
@@ -95,10 +86,6 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   tenant: one(tenants, {
     fields: [auditLogs.tenantId],
     references: [tenants.id],
-  }),
-  user: one(users, {
-    fields: [auditLogs.userId],
-    references: [users.id],
   }),
   document: one(documents, {
     fields: [auditLogs.documentId],

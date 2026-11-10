@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { and, eq, inArray } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
+import { CODES } from '@/lib/authz-claim'
 import { db } from '@/db'
 import { documents } from '@/db/schema/documents'
 import { createAuditLog } from '@/features/audit/audit.repository'
@@ -14,7 +15,7 @@ import {
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session?.user) return unauthorizedResponse()
-  if (session.user.role === 'viewer') return forbiddenResponse()
+  if (!session.can(CODES.review)) return forbiddenResponse()
 
   const body = await req.json()
   const { action, documentIds } = body as {
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
     for (const doc of result) {
       await createAuditLog({
         tenantId,
-        userId: session.user.id,
+        actor: session.user,
         documentId: doc.id,
         action: 'document.approved',
         details: { batch: true },
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
     for (const doc of result) {
       await createAuditLog({
         tenantId,
-        userId: session.user.id,
+        actor: session.user,
         documentId: doc.id,
         action: 'document.deleted',
         details: { batch: true },

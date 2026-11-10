@@ -2,13 +2,11 @@ import { compare } from 'bcryptjs'
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { apiKeys } from '@/db/schema/api-keys'
-import { users } from '@/db/schema/users'
-import { auth } from './auth'
+import { auth, type Actor } from './auth'
 
 type AuthResult = {
-  userId: string
+  actor: Actor
   tenantId: string
-  role: 'admin' | 'reviewer' | 'viewer'
 }
 
 export async function authenticateRequest(
@@ -24,13 +22,10 @@ export async function authenticateRequest(
   const session = await auth()
   if (!session?.user) return null
 
-  return {
-    userId: session.user.id,
-    tenantId: session.user.tenantId,
-    role: session.user.role,
-  }
+  return { actor: session.user, tenantId: session.user.tenantId }
 }
 
+// Machine credential (D9, phase 5): product-minted and still accepted until it moves to identity client_credentials.
 async function authenticateApiKey(
   key: string
 ): Promise<AuthResult | null> {
@@ -48,15 +43,10 @@ async function authenticateApiKey(
       .set({ lastUsedAt: new Date() })
       .where(eq(apiKeys.id, k.id))
 
-    // Get tenant's first admin user as the acting user
-    const user = await db.query.users.findFirst({
-      where: eq(users.tenantId, k.tenantId),
-    })
-
+    // The key is the actor: an opaque reference, not a user row.
     return {
-      userId: user?.id ?? '',
+      actor: { id: `apikey:${k.id}`, name: k.name },
       tenantId: k.tenantId,
-      role: 'admin',
     }
   }
 

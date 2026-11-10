@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { and, eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
+import { CODES } from '@/lib/authz-claim'
 import { db } from '@/db'
 import { apiKeys } from '@/db/schema/api-keys'
 import {
@@ -16,7 +17,7 @@ export async function DELETE(
 ) {
   const session = await auth()
   if (!session?.user) return unauthorizedResponse()
-  if (session.user.role !== 'admin') return forbiddenResponse()
+  if (!session.can(CODES.admin)) return forbiddenResponse()
 
   const { id } = await params
 

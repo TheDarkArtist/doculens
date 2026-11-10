@@ -4,6 +4,7 @@ import { ok, err, type Result } from '@/lib/result'
 import { inngest } from '@/inngest/client'
 import * as documentRepo from './document.repository'
 import { createAuditLog } from '@/features/audit/audit.repository'
+import type { Actor } from '@/lib/auth'
 import type { CreateDocumentInput, UploadUrlInput } from './document.types'
 
 export async function generateUploadUrl(
@@ -23,19 +24,19 @@ export async function generateUploadUrl(
 
 export async function createDocument(
   tenantId: string,
-  userId: string,
+  actor: Actor,
   input: CreateDocumentInput
 ) {
   try {
     const doc = await documentRepo.createDocument(
       tenantId,
-      userId,
+      actor,
       input
     )
 
     await createAuditLog({
       tenantId,
-      userId,
+      actor,
       documentId: doc.id,
       action: 'document.uploaded',
       details: {

@@ -33,7 +33,10 @@ export const extractedFields = pgTable(
     sourcePage: integer('source_page'),
     sourceBbox: jsonb('source_bbox').$type<BoundingBox>(),
     isAutoApproved: boolean('is_auto_approved').notNull().default(false),
+    // Legacy FK, contract migration drops it.
     reviewedBy: uuid('reviewed_by').references(() => users.id),
+    reviewedBySub: text('reviewed_by_sub'),
+    reviewedByName: text('reviewed_by_name'),
     reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
     originalValue: text('original_value'),
     createdAt: timestamp('created_at', { withTimezone: true })

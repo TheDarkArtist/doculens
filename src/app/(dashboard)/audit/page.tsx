@@ -71,7 +71,7 @@ export default async function AuditPage() {
                         </Badge>
                       </td>
                       <td className="p-3 text-muted-foreground">
-                        {log.user?.name ?? 'System'}
+                        {log.userName ?? 'System'}
                       </td>
                       <td className="p-3 text-muted-foreground">
                         {log.document?.filename ?? '—'}

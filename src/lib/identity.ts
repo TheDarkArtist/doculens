@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
+import { verifyAccessToken } from '@tdacorp/identity-sdk'
 import { createRelyingParty, type LoginSuccess, type ClientKey } from '@tdacorp/identity-sdk/rp'
 import { createAuthRoutes, type AuthRoutes } from '@tdacorp/identity-sdk/rp/next'
 import { db } from '@/db'
-import { users } from '@/db/schema/users'
+import { tenants } from '@/db/schema/tenants'
 import { clearSessionCookie, sessionCookie } from './auth'
-import { decideLink, normalizeEmail } from './identity-link'
+import { CODES, grantedCodes } from './authz-claim'
+import { revokeSession } from './revoked-session'
 import { signedOutCookie } from './login-path'
 import { env } from './env'
 
@@ -35,6 +37,8 @@ export function authRoutes(): AuthRoutes {
     cookieSecret: required(env.OIDC_COOKIE_SECRET, 'OIDC_COOKIE_SECRET'),
     defaultReturnTo: '/dashboard',
     onLogin: signIn,
+    // D4: identity pushes an ended session; auth() refuses its sid from then on.
+    backchannelLogout: { onLogout: ({ sid }) => (sid ? revokeSession(sid) : undefined) },
     // Every failure collapses to one redirect so the callback is never an oracle for provider text.
     onError: () => NextResponse.redirect(new URL(`${LOGIN_PATH}?error=1`, origin), 303),
     logout: {
@@ -44,33 +48,31 @@ export function authRoutes(): AuthRoutes {
   })
 }
 
-async function signIn({ idToken, redirectTo }: LoginSuccess): Promise<Response> {
-  const { email, email_verified: emailVerified } = idToken.claims
-  const claims = {
-    sub: idToken.sub,
-    email: typeof email === 'string' ? normalizeEmail(email) : '',
-    emailVerified: emailVerified === true,
-  }
-  const bySubject = await db.query.users.findFirst({ where: eq(users.identitySubject, claims.sub) })
-  const byEmail = bySubject || !claims.email
-    ? []
-    : await db.query.users.findMany({ where: sql`lower(${users.email}) = ${claims.email}` })
+async function signIn({ tokens, idToken, redirectTo }: LoginSuccess): Promise<Response> {
+  // Authorization is the access token's claim (ADR 0001): verified locally, issuer and audience = this client.
+  const verified = await verifyAccessToken(tokens.accessToken, {
+    issuer: required(env.OIDC_ISSUER, 'OIDC_ISSUER').replace(/\/+$/, ''),
+    audience: required(env.OIDC_CLIENT_ID, 'OIDC_CLIENT_ID'),
+  })
+  const codes = grantedCodes(verified.claims)
+  const tid = verified.tenantId
+  const tenant = tid && (await db.query.tenants.findFirst({ where: eq(tenants.identityTenantId, tid) }))
+  if (!tenant || !codes.includes(CODES.read)) return NextResponse.json({ error: 'no DocuLens access for this identity' }, { status: 403 })
 
-  const decision = decideLink(claims, bySubject, byEmail)
-  let userId = decision.action === 'reject' ? null : decision.userId
-  if (decision.action === 'link') {
-    // The IS NULL guard makes a concurrent first login lose cleanly instead of overwriting a link.
-    const [linked] = await db
-      .update(users)
-      .set({ identitySubject: claims.sub })
-      .where(and(eq(users.id, decision.userId), isNull(users.identitySubject)))
-      .returning({ id: users.id })
-    userId = linked?.id ?? null
-  }
-  if (!userId) return NextResponse.json({ error: 'no DocuLens account for this identity' }, { status: 403 })
+  const { name, email } = idToken.claims
+  const cookie = await sessionCookie({
+    sub: verified.subject,
+    name: typeof name === 'string' ? name : '',
+    email: typeof email === 'string' ? email : '',
+    tid,
+    codes,
+    sid: verified.sessionId,
+    tokenExpiresAt: verified.expiresAt,
+  })
+  if (!cookie) return NextResponse.json({ error: 'access token expired' }, { status: 403 })
 
   // 200 + Refresh rather than 303: the callback is a cross-site navigation from identity, and a 303 chain can drop fresh cookies.
   const res = new NextResponse(null, { status: 200, headers: { Refresh: `0; url=${redirectTo}` } })
-  res.headers.append('Set-Cookie', await sessionCookie(userId))
+  res.headers.append('Set-Cookie', cookie)
   return res
 }

@@ -16,7 +16,7 @@ export async function GET() {
     [
       new Date(log.createdAt).toISOString(),
       log.action,
-      log.user?.name ?? 'System',
+      log.userName ?? 'System',
       log.document?.filename ?? '',
       `"${JSON.stringify(log.details).replace(/"/g, '""')}"`,
     ].join(',')

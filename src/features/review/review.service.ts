@@ -5,11 +5,12 @@ import { extractedFields } from '@/db/schema/extracted-fields'
 import { createAuditLog } from '@/features/audit/audit.repository'
 import { updateDocumentStatus } from '@/features/documents/document.repository'
 import { ok, err, type Result } from '@/lib/result'
+import type { Actor } from '@/lib/auth'
 import type { CorrectFieldInput } from './review.types'
 
 export async function correctField(
   tenantId: string,
-  userId: string,
+  actor: Actor,
   documentId: string,
   fieldId: string,
   input: CorrectFieldInput
@@ -35,7 +36,8 @@ export async function correctField(
     .set({
       fieldValue: input.value,
       originalValue: field.originalValue ?? field.fieldValue,
-      reviewedBy: userId,
+      reviewedBySub: actor.id,
+      reviewedByName: actor.name,
       reviewedAt: new Date(),
       isAutoApproved: false,
     })
@@ -44,7 +46,7 @@ export async function correctField(
 
   await createAuditLog({
     tenantId,
-    userId,
+    actor,
     documentId,
     action: 'field.corrected',
     details: {
@@ -60,7 +62,7 @@ export async function correctField(
 
 export async function approveDocument(
   tenantId: string,
-  userId: string,
+  actor: Actor,
   documentId: string
 ): Promise<Result<{ id: string }>> {
   const doc = await db.query.documents.findFirst({
@@ -75,10 +77,10 @@ export async function approveDocument(
 
   await createAuditLog({
     tenantId,
-    userId,
+    actor,
     documentId,
     action: 'document.approved',
-    details: { approvedBy: userId },
+    details: { approvedBy: actor.id },
   })
 
   return ok({ id: documentId })
@@ -86,7 +88,7 @@ export async function approveDocument(
 
 export async function rejectDocument(
   tenantId: string,
-  userId: string,
+  actor: Actor,
   documentId: string,
   reason: string
 ): Promise<Result<{ id: string }>> {
@@ -104,7 +106,7 @@ export async function rejectDocument(
 
   await createAuditLog({
     tenantId,
-    userId,
+    actor,
     documentId,
     action: 'document.rejected',
     details: { reason },

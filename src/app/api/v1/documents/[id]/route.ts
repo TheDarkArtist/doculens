@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth'
+import { CODES } from '@/lib/authz-claim'
 import {
   successResponse,
   unauthorizedResponse,
@@ -33,7 +34,7 @@ export async function DELETE(
 ) {
   const session = await auth()
   if (!session?.user) return unauthorizedResponse()
-  if (session.user.role === 'viewer') return forbiddenResponse()
+  if (!session.can(CODES.review)) return forbiddenResponse()
 
   const { id } = await params
   const doc = await softDeleteDocument(session.user.tenantId, id)
@@ -41,7 +42,7 @@ export async function DELETE(
 
   await createAuditLog({
     tenantId: session.user.tenantId,
-    userId: session.user.id,
+    actor: session.user,
     documentId: id,
     action: 'document.deleted',
     details: { filename: doc.filename },
