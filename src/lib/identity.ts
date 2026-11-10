@@ -7,7 +7,7 @@ import { db } from '@/db'
 import { tenants } from '@/db/schema/tenants'
 import { clearSessionCookie, sessionCookie } from './auth'
 import { CODES, grantedCodes } from './authz-claim'
-import { revokeSession } from './revoked-session'
+import { revokeSession, revokeSubject } from './revoked-session'
 import { signedOutCookie } from './login-path'
 import { env } from './env'
 
@@ -38,7 +38,7 @@ export function authRoutes(): AuthRoutes {
     defaultReturnTo: '/dashboard',
     onLogin: signIn,
     // D4: identity pushes an ended session; auth() refuses its sid from then on.
-    backchannelLogout: { onLogout: ({ sid }) => (sid ? revokeSession(sid) : undefined) },
+    backchannelLogout: { onLogout: ({ sid, sub, claims }) => (sid ? revokeSession(sid) : sub ? revokeSubject(sub, typeof claims.iat === 'number' ? claims.iat : Math.floor(Date.now() / 1000)) : undefined) },
     // Every failure collapses to one redirect so the callback is never an oracle for provider text.
     onError: () => NextResponse.redirect(new URL(`${LOGIN_PATH}?error=1`, origin), 303),
     logout: {
@@ -67,6 +67,7 @@ async function signIn({ tokens, idToken, redirectTo }: LoginSuccess): Promise<Re
     tid,
     codes,
     sid: verified.sessionId,
+    isub: idToken.sub,
     tokenExpiresAt: verified.expiresAt,
   })
   if (!cookie) return NextResponse.json({ error: 'access token expired' }, { status: 403 })

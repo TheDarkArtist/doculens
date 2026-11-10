@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth'
+import { CODES } from '@/lib/authz-claim'
 import {
   successResponse,
   errorResponse,
   unauthorizedResponse,
+  forbiddenResponse,
 } from '@/lib/api-response'
 import { uploadUrlSchema } from '@/features/documents/document.types'
 import { generateUploadUrl } from '@/features/documents/document.service'
@@ -11,6 +13,7 @@ import { generateUploadUrl } from '@/features/documents/document.service'
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session?.user) return unauthorizedResponse()
+  if (!session.can(CODES.review)) return forbiddenResponse()
 
   const body = await req.json()
   const parsed = uploadUrlSchema.safeParse(body)

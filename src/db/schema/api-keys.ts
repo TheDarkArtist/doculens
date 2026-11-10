@@ -6,6 +6,8 @@ export const apiKeys = pgTable('api_keys', {
   tenantId: uuid('tenant_id')
     .notNull()
     .references(() => tenants.id),
+  // First characters of the raw key, a non-secret lookup so one bcrypt compare is needed; null on keys made before it.
+  keyPrefix: text('key_prefix'),
   keyHash: text('key_hash').notNull(),
   name: text('name').notNull(),
   scopes: text('scopes').array().notNull().default([]),

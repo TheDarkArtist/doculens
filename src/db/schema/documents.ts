@@ -32,8 +32,9 @@ export const documents = pgTable(
     ),
     // Legacy FK, contract migration drops it; new rows carry the identity sub and a name snapshot.
     uploadedBy: uuid('uploaded_by').references(() => users.id),
-    uploadedBySub: text('uploaded_by_sub').notNull(),
-    uploadedByName: text('uploaded_by_name').notNull(),
+    // Nullable until the contract migration (the previous release still inserts without them); always written now.
+    uploadedBySub: text('uploaded_by_sub'),
+    uploadedByName: text('uploaded_by_name'),
     filename: text('filename').notNull(),
     mimeType: text('mime_type').notNull(),
     fileSize: integer('file_size').notNull(),

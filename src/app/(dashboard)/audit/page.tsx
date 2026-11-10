@@ -1,4 +1,5 @@
 import { auth } from '@/lib/auth'
+import { CODES } from '@/lib/authz-claim'
 import { redirect } from 'next/navigation'
 import { listAuditLogs } from '@/features/audit/audit.service'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -23,6 +24,7 @@ const actionLabels: Record<string, string> = {
 export default async function AuditPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
+  if (!session.can(CODES.admin)) redirect('/dashboard')
 
   const { items, total } = await listAuditLogs(session.user.tenantId)
 

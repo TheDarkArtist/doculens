@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
+import { CODES } from '@/lib/authz-claim'
 import {
   successResponse,
   errorResponse,
   unauthorizedResponse,
+  forbiddenResponse,
 } from '@/lib/api-response'
 import {
   createDocumentSchema,
@@ -14,6 +16,7 @@ import * as documentService from '@/features/documents/document.service'
 export async function POST(req: NextRequest) {
   const authResult = await authenticateRequest(req)
   if (!authResult) return unauthorizedResponse()
+  if (!authResult.can(CODES.review)) return forbiddenResponse()
 
   const body = await req.json()
   const parsed = createDocumentSchema.safeParse(body)
@@ -37,6 +40,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const authResult = await authenticateRequest(req)
   if (!authResult) return unauthorizedResponse()
+  if (!authResult.can(CODES.read)) return forbiddenResponse()
 
   const params = Object.fromEntries(req.nextUrl.searchParams)
   const parsed = listDocumentsSchema.safeParse(params)

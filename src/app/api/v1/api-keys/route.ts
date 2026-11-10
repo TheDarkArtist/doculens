@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { hashSync } from 'bcryptjs'
 import { v4 as uuid } from 'uuid'
+import { keyPrefix } from '@/lib/api-auth'
 import { auth } from '@/lib/auth'
 import { CODES } from '@/lib/authz-claim'
 import { db } from '@/db'
@@ -16,6 +17,7 @@ import {
 export async function GET() {
   const session = await auth()
   if (!session?.user) return unauthorizedResponse()
+  if (!session.can(CODES.admin)) return forbiddenResponse()
 
   const keys = await db.query.apiKeys.findMany({
     where: eq(apiKeys.tenantId, session.user.tenantId),
@@ -55,6 +57,7 @@ export async function POST(req: NextRequest) {
       tenantId: session.user.tenantId,
       name,
       keyHash,
+      keyPrefix: keyPrefix(rawKey),
       scopes: scopes ?? ['documents:read', 'documents:write'],
     })
     .returning({

@@ -21,6 +21,10 @@ export interface SessionIdentity {
   tid: string
   codes: string[]
   sid: string | null
+  /** The ID token `sub` (a pairwise client sees a different one than `sub`), what a back-channel logout token names. */
+  isub: string
+  /** Epoch seconds the session was issued. */
+  iat: number
   /** Epoch seconds. */
   tokenExpiresAt: number
 }
@@ -40,10 +44,12 @@ const secret = () => {
 const secureAttr = () => (env.APP_ORIGIN?.startsWith('https:') === false ? '' : '; Secure')
 
 /** Set-Cookie value for a session, or null when the token has no time left (fail closed: no session). */
-export async function sessionCookie(identity: SessionIdentity): Promise<string | null> {
-  const ttl = Math.min(SESSION_MAX_AGE_SECONDS, identity.tokenExpiresAt - Math.floor(Date.now() / 1000))
+export async function sessionCookie(input: NewSession): Promise<string | null> {
+  const now = Math.floor(Date.now() / 1000)
+  const ttl = Math.min(SESSION_MAX_AGE_SECONDS, input.tokenExpiresAt - now)
   if (ttl < 1) return null
-  const { tokenExpiresAt: _exp, ...payload } = identity
+  const { tokenExpiresAt: _exp, ...rest } = input
+  const payload: StoredSession = { ...rest, iat: now }
   const value = await seal(payload, { secret: secret(), ttlSeconds: ttl, purpose: PURPOSE })
   return `${SESSION_COOKIE}=${value}; Path=/; Max-Age=${ttl}; HttpOnly${secureAttr()}; SameSite=Lax`
 }
@@ -52,13 +58,14 @@ export const clearSessionCookie = () =>
   `${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly${secureAttr()}; SameSite=Lax`
 
 type StoredSession = Omit<SessionIdentity, 'tokenExpiresAt'>
+export type NewSession = Omit<SessionIdentity, 'iat'>
 
 /** The session in a cookie value, or null when absent, forged, expired or malformed. */
 export async function readSession(value: string | undefined): Promise<StoredSession | null> {
   if (!value) return null
   const p = await unseal<Partial<StoredSession>>(value, { secret: secret(), purpose: PURPOSE })
-  if (!p?.sub || !p.tid || !Array.isArray(p.codes) || !p.codes.every((c) => typeof c === 'string')) return null
-  return { sub: p.sub, name: p.name ?? '', email: p.email ?? '', tid: p.tid, codes: p.codes, sid: p.sid ?? null }
+  if (!p?.sub || !p.tid || !p.isub || typeof p.iat !== 'number' || !Array.isArray(p.codes) || !p.codes.every((c) => typeof c === 'string')) return null
+  return { sub: p.sub, name: p.name ?? '', email: p.email ?? '', tid: p.tid, codes: p.codes, sid: p.sid ?? null, isub: p.isub, iat: p.iat }
 }
 
 /**
@@ -70,7 +77,7 @@ export async function auth() {
   if (!session) return null
   const [tenant, revoked] = await Promise.all([
     db.query.tenants.findFirst({ where: eq(tenants.identityTenantId, session.tid) }),
-    session.sid ? isSessionRevoked(session.sid) : false,
+    isSessionRevoked(session),
   ])
   const can = (code: string) => sessionCan(session, code, tenant?.identityTenantId ?? null)
   if (!tenant || revoked || !can(CODES.read)) return null

@@ -4,6 +4,15 @@
 
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS identity_tenant_id uuid UNIQUE;
 
+CREATE TABLE IF NOT EXISTS revoked_subjects (
+  sub text PRIMARY KEY,
+  revoked_at integer NOT NULL,
+  expires_at timestamptz NOT NULL
+);
+
+ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS key_prefix text;
+CREATE INDEX IF NOT EXISTS api_keys_key_prefix_idx ON api_keys (key_prefix);
+
 CREATE TABLE IF NOT EXISTS revoked_sessions (
   sid text PRIMARY KEY,
   expires_at timestamptz NOT NULL
@@ -32,6 +41,5 @@ UPDATE extracted_fields f SET
   reviewed_by_name = u.name
 FROM users u WHERE f.reviewed_by = u.id AND f.reviewed_by_sub IS NULL;
 
+-- uploaded_by_sub/_name stay nullable here: the release running before this one still inserts documents without them.
 ALTER TABLE documents ALTER COLUMN uploaded_by DROP NOT NULL;
-ALTER TABLE documents ALTER COLUMN uploaded_by_sub SET NOT NULL;
-ALTER TABLE documents ALTER COLUMN uploaded_by_name SET NOT NULL;

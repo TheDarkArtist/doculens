@@ -15,6 +15,7 @@ import {
 export async function GET() {
   const session = await auth()
   if (!session?.user) return unauthorizedResponse()
+  if (!session.can(CODES.admin)) return forbiddenResponse()
 
   const hooks = await db.query.webhooks.findMany({
     where: eq(webhooks.tenantId, session.user.tenantId),

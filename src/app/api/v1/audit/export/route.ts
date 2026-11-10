@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { unauthorizedResponse } from '@/lib/api-response'
+import { CODES } from '@/lib/authz-claim'
+import { forbiddenResponse, unauthorizedResponse } from '@/lib/api-response'
 import { listAuditLogs } from '@/features/audit/audit.service'
 
 export async function GET() {
   const session = await auth()
   if (!session?.user) return unauthorizedResponse()
+  if (!session.can(CODES.admin)) return forbiddenResponse()
 
   const { items } = await listAuditLogs(session.user.tenantId, {
     limit: 10000,
